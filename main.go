@@ -3,6 +3,7 @@ package main
 import (
 	"./common"
 	"./network"
+	"./node"
 	"flag"
 	"log"
 	"os"
@@ -23,8 +24,9 @@ func (flag *arrayFlag) Set(value string) error {
 
 var (
 	port  uint      // 监听的端口
-	id    string    // node_id
 	hosts arrayFlag // 种子节点
+
+	role string // follower, candidate, leader
 )
 
 func init() {
@@ -32,15 +34,13 @@ func init() {
 	log.SetOutput(os.Stdout)
 
 	flag.UintVar(&port, "port", 6300, "Bind port")
-	flag.StringVar(&id, "id", common.RandomString(10), "Node id")
+	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id")
 	flag.Var(&hosts, "hosts", "Seed hosts")
 	flag.Parse()
 }
 
 func main() {
-	log.Println(port)
-	log.Println(id)
-	log.Println(hosts)
+	node.AddNode(node.Node{NodeId: common.LocalNodeId})
 
 	go network.Listen(port)
 	for _, host := range hosts {

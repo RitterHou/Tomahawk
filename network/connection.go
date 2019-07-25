@@ -171,7 +171,7 @@ func handleConnection(c net.Conn) {
 					info := []byte{common.ShareNodes}
 					info = append(info, common.AddBufHead(nodeIdBuf)...)
 					info = append(info, common.AddBufHead([]byte(remoteIp))...)
-					info = append(info, portBuf...)
+					info = append(info, remotePortBuf...)
 					_, err := nodeConn.Write(info)
 					if err != nil {
 						log.Fatal(err)
@@ -197,10 +197,8 @@ func handleConnection(c net.Conn) {
 			}
 			remotePort := binary.LittleEndian.Uint32(remotePortBuf)
 
-			if node.NodeExist(nodeId) {
-				log.Println("已经连接该节点，不需要再次连接", nodeId)
-			} else {
-				// 只有这个节点不存在于节点列表的时候才需要去连接
+			// 只有这个节点不存在于节点列表的时候才需要去连接
+			if !node.NodeExist(nodeId) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
 		}

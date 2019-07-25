@@ -65,6 +65,6 @@ type Node struct {
 }
 
 func (node Node) String() string {
-	return fmt.Sprintf("{id: %s, connection: %s, ip: %s, port: %d, http: %d}",
-		node.NodeId, node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort)
+	return fmt.Sprintf("{id: %s, connection: %s -> %s, ip: %s, port: %d, http: %d}",
+		node.NodeId, node.Conn.LocalAddr(), node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort)
 }

@@ -1,6 +1,7 @@
 package node
 
 import (
+	"../common"
 	"fmt"
 	"log"
 	"net"
@@ -15,7 +16,7 @@ func AddNode(node Node) {
 	if node.NodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	log.Printf("Add node %s", node.NodeId)
+	log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
 	mutex.Lock()
 	nodes[node.NodeId] = node
 	mutex.Unlock()
@@ -25,13 +26,13 @@ func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	log.Printf("Remove node %s", nodeId)
+	log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
 	mutex.Lock()
 	delete(nodes, nodeId)
 	mutex.Unlock()
 }
 
-func NodeExist(nodeId string) bool {
+func ExistNode(nodeId string) bool {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
@@ -46,7 +47,20 @@ func GetNode(nodeId string) Node {
 	return nodes[nodeId]
 }
 
-func GetNodes() []Node {
+// 用于对结果进行排序
+type TheNodeList []Node
+
+func (l TheNodeList) Len() int {
+	return len(l)
+}
+func (l TheNodeList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+func (l TheNodeList) Less(i, j int) bool {
+	return l[j].NodeId > l[i].NodeId
+}
+
+func GetNodes() TheNodeList {
 	mutex.Lock()
 	n := make([]Node, 0, len(nodes))
 	for _, val := range nodes {

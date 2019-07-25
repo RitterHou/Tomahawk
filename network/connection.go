@@ -30,7 +30,7 @@ func Listen(port uint) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Listening host", host)
+	log.Println("TCP Server Listening Port", port)
 	defer func() {
 		err = l.Close()
 		if err != nil {
@@ -153,7 +153,7 @@ func handleConnection(c net.Conn) {
 				HTTPPort: remoteHTTPPort,
 			}
 			node.AddNode(remoteNode) // 添加节点
-			log.Println("Remote node:", remoteNode)
+			log.Println("Connected to remote node:", remoteNode)
 
 			if addr, ok := c.LocalAddr().(*net.TCPAddr); ok {
 				if uint(addr.Port) != common.Port {
@@ -198,7 +198,7 @@ func handleConnection(c net.Conn) {
 			remotePort := binary.LittleEndian.Uint32(remotePortBuf)
 
 			// 只有这个节点不存在于节点列表的时候才需要去连接
-			if !node.NodeExist(nodeId) {
+			if !node.ExistNode(nodeId) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
 		}

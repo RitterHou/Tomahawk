@@ -20,20 +20,25 @@ func Do() {
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
 				common.Role = common.Candidate // 更新为候选人
 				if common.LEVEL >= common.DEBUG {
-					log.Printf("%s(me) become candidate\n", common.LocalNodeId)
+					log.Printf("%s(me) heartbeat timeout and become candidate\n", common.LocalNodeId)
 				}
 			}
 		case common.Candidate: // 最复杂 1.成为leader; 2.成为follower; 3.继续下一轮选举
 			common.CurrentTerm += 1
 			common.Votes = 1 // 首先投票给自己
-			// 给所有的节点发送投票请求
-			nodes := node.GetNodes()
-			for _, n := range nodes {
-				if n.Conn != nil {
-					data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
-					_, err := n.Conn.Write(data)
-					if err != nil {
-						log.Fatal(err)
+
+			if common.Votes >= uint32(len(node.GetNodes())/2) {
+				common.VoteSuccessCh <- true
+			} else {
+				// 给所有的节点发送投票请求
+				nodes := node.GetNodes()
+				for _, n := range nodes {
+					if n.Conn != nil {
+						data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
+						_, err := n.Conn.Write(data)
+						if err != nil {
+							log.Fatal(err)
+						}
 					}
 				}
 			}
@@ -43,8 +48,14 @@ func Do() {
 			case success := <-common.VoteSuccessCh:
 				if success {
 					common.Role = common.Leader
+					if common.LEVEL >= common.DEBUG {
+						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
+					}
 				} else {
 					common.Role = common.Follower
+					if common.LEVEL >= common.DEBUG {
+						log.Printf("%s(me) Vote failed and becmoe follower\n", common.LocalNodeId)
+					}
 				}
 			case <-time.After(time.Duration(electionTimeout) * time.Millisecond):
 				if common.LEVEL >= common.DEBUG {

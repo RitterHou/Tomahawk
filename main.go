@@ -2,6 +2,7 @@ package main
 
 import (
 	"./common"
+	"./election"
 	"./http"
 	"./network"
 	"./node"
@@ -48,5 +49,6 @@ func main() {
 		network.Connect(host)
 	}
 
+	go election.Do()
 	http.StartHttpServer(common.HTTPPort)
 }

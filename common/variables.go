@@ -40,9 +40,9 @@ const (
 
 // 选举相关的一些数据
 var (
-	HeartbeatTimeoutCh = make(chan bool) // 当前节点心跳超时的channel
-	VoteSuccessCh      = make(chan bool) // 选举情况channel
-	LeaderSendEntryCh  = make(chan bool) // leader发送了信息的channel
+	HeartbeatTimeoutCh = make(chan bool, 1) // 当前节点心跳超时的channel
+	VoteSuccessCh      = make(chan bool, 1) // 选举情况channel
+	LeaderSendEntryCh  = make(chan bool, 1) // leader发送了信息的channel
 )
 
 // 日志等级

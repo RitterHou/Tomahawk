@@ -253,7 +253,7 @@ func handleConnection(c net.Conn) {
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
-				if common.Votes > uint32(len(node.GetNodes())/2) {
+				if common.Votes >= uint32(len(node.GetNodes())/2) {
 					common.VoteSuccessCh <- true
 				}
 			}

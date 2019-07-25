@@ -57,10 +57,14 @@ func GetNodes() []Node {
 }
 
 type Node struct {
-	NodeId string
-	Conn   net.Conn
+	NodeId   string
+	Conn     net.Conn
+	Ip       string
+	TCPPort  uint32
+	HTTPPort uint32
 }
 
 func (node Node) String() string {
-	return fmt.Sprintf("{id: %s, connection: %s}", node.NodeId, node.Conn.RemoteAddr())
+	return fmt.Sprintf("{id: %s, connection: %s, ip: %s, port: %d, http: %d}",
+		node.NodeId, node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort)
 }

@@ -37,7 +37,11 @@ func init() {
 }
 
 func main() {
-	node.AddNode(node.Node{NodeId: common.LocalNodeId})
+	node.AddNode(node.Node{
+		NodeId:   common.LocalNodeId,
+		TCPPort:  uint32(common.Port),
+		HTTPPort: uint32(common.HTTPPort),
+	})
 
 	go network.Listen(common.Port)
 	for _, host := range common.Hosts {

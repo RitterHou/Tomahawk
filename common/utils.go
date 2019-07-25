@@ -21,7 +21,7 @@ func RandomString(n int) string {
 	return string(b)
 }
 
-func uint32ToBytes(num uint32) []byte {
+func Uint32ToBytes(num uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, num)
 	return buf
@@ -35,7 +35,7 @@ func AddBufHead(buf []byte) []byte {
 		head = append(head, byte(length))
 	} else {
 		head = append(head, byte(0xff))
-		head = append(head, uint32ToBytes(uint32(length))...)
+		head = append(head, Uint32ToBytes(uint32(length))...)
 	}
 	body := append(head, buf...)
 	return body

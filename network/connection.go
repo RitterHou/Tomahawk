@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync/atomic"
 )
 
 func Connect(host string) {
@@ -210,8 +211,52 @@ func handleConnection(c net.Conn) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
 		case common.AppendEntries:
-			// 暂时只发送心跳，不发送数据
-			common.HeartbeatTimeoutCh <- true
+			termBuf, success := read(4)
+			if !success {
+				return
+			}
+			term := binary.LittleEndian.Uint32(termBuf)
+
+			if common.Role == common.Candidate {
+				if term >= common.CurrentTerm {
+					common.VoteSuccessCh <- false
+					common.CurrentTerm = term
+				}
+			} else {
+				common.HeartbeatTimeoutCh <- true
+				common.CurrentTerm = term
+			}
+		case common.VoteRequest:
+			termBuf, success := read(4)
+			if !success {
+				return
+			}
+			term := binary.LittleEndian.Uint32(termBuf)
+			var response = []byte{common.VoteResponse}
+			// 大于当前的任期
+			if term > common.CurrentTerm {
+				common.CurrentTerm = term
+				common.Role = common.Follower
+				response = append(response, byte(1))
+			} else {
+				response = append(response, byte(0))
+			}
+			_, err := c.Write(response)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case common.VoteResponse:
+			voteBuf, success := read(1)
+			if !success {
+				return
+			}
+			vote := voteBuf[0]
+			if vote == 1 {
+				atomic.AddUint32(&common.Votes, 1)
+				if common.Votes > uint32(len(node.GetNodes())/2) {
+					common.VoteSuccessCh <- true
+				}
+			}
 		}
 	}
 }

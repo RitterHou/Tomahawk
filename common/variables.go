@@ -25,7 +25,8 @@ const (
 	ExchangeNodeInfo byte = iota // 传输的数据为节点信息
 	ShareNodes                   // 共享节点信息
 	AppendEntries                // leader向follower发送数据
-	VoteRequest
+	VoteRequest                  // 投票的请求
+	VoteResponse                 // 投票的响应
 )
 
 var Role = Follower
@@ -62,5 +63,7 @@ const (
 	LeaderCycleTimeout  = 100
 )
 
-// 当前任期
-var currentTerm uint32 = 0
+var (
+	CurrentTerm uint32 = 0 // 当前任期
+	Votes       uint32 = 0 // 获取选票数
+)

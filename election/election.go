@@ -24,6 +24,20 @@ func Do() {
 				}
 			}
 		case common.Candidate: // 最复杂 1.成为leader; 2.成为follower; 3.继续下一轮选举
+			common.CurrentTerm += 1
+			common.Votes = 1 // 首先投票给自己
+			// 给所有的节点发送投票请求
+			nodes := node.GetNodes()
+			for _, n := range nodes {
+				if n.Conn != nil {
+					data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
+					_, err := n.Conn.Write(data)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+			}
+
 			electionTimeout := common.RandomInt(common.ElectionTimeoutMin, common.ElectionTimeoutMax)
 			select {
 			case success := <-common.VoteSuccessCh:
@@ -48,11 +62,13 @@ func Do() {
 				if common.LEVEL >= common.DEBUG {
 					log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
+				data := []byte{common.AppendEntries}
+				data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)
 				// 发送心跳数据，防止follower超时
 				nodes := node.GetNodes()
 				for _, n := range nodes {
 					if n.Conn != nil {
-						_, err := n.Conn.Write([]byte{common.AppendEntries})
+						_, err := n.Conn.Write(data)
 						if err != nil {
 							log.Fatal(err)
 						}

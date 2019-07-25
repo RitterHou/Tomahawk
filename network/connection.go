@@ -120,6 +120,7 @@ func handleConnection(c net.Conn) {
 		}
 	}
 
+	// 读取远程主机发送的数据
 	for {
 		dataType, success := read(1)
 		if !success {

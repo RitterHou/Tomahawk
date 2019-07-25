@@ -2,13 +2,13 @@ package main
 
 import (
 	"./common"
+	"./http"
 	"./network"
 	"./node"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"time"
 )
 
 var (
@@ -30,6 +30,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 
 	flag.UintVar(&common.Port, "port", 6300, "Bind port")
+	flag.UintVar(&common.HTTPPort, "http", 6200, "HTTP server bind port")
 	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id")
 	flag.Var(&common.Hosts, "hosts", "Seed hosts")
 	flag.Parse()
@@ -43,5 +44,5 @@ func main() {
 		network.Connect(host)
 	}
 
-	time.Sleep(1 * time.Hour)
+	http.StartHttpServer(common.HTTPPort)
 }

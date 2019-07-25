@@ -15,6 +15,7 @@ func (flag *arrayFlag) Set(value string) error {
 var (
 	LocalNodeId string    // 当前节点id
 	Port        uint      // 监听的端口
+	HTTPPort    uint      // HTTP服务监听的端口
 	Hosts       arrayFlag // 种子节点
 )
 

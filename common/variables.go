@@ -12,6 +12,7 @@ func (flag *arrayFlag) Set(value string) error {
 	return nil
 }
 
+// 当前节点的一些参数信息
 var (
 	LocalNodeId string    // 当前节点id
 	Port        uint      // 监听的端口
@@ -21,8 +22,8 @@ var (
 
 // 网络传输的数据类型
 const (
-	ExchangeNodeId byte = iota // 传输的数据为nodeId
-	ShareNodes                 // 共享节点信息
+	ExchangeNodeInfo byte = iota // 传输的数据为节点信息
+	ShareNodes                   // 共享节点信息
 )
 
 // 节点类型
@@ -30,4 +31,19 @@ const (
 	follower byte = iota
 	candidate
 	leader
+)
+
+// 选举相关的一些数据
+var (
+	RoleTimeoutCh = make(chan bool)
+)
+
+// 日志等级
+var LEVEL = DEBUG
+
+const (
+	ERROR byte = iota
+	WARN
+	INFO
+	DEBUG
 )

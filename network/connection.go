@@ -15,7 +15,9 @@ func Connect(host string) {
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
 		if err.Error() == "dial tcp "+host+": connect: connection refused" {
-			log.Println("Connection refused by node:", host)
+			if common.LEVEL >= common.WARN {
+				log.Println("Connection refused by node:", host)
+			}
 			return
 		}
 		log.Fatal(err)
@@ -30,7 +32,9 @@ func Listen(port uint) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("TCP Server Listening Port", port)
+	if common.LEVEL >= common.INFO {
+		log.Println("TCP Server Listening Port", port)
+	}
 	defer func() {
 		err = l.Close()
 		if err != nil {
@@ -60,7 +64,7 @@ func handleConnection(c net.Conn) {
 	portBuf := common.Uint32ToBytes(uint32(common.Port))
 	httpPortBuf := common.Uint32ToBytes(uint32(common.HTTPPort))
 
-	nodeInfo := []byte{common.ExchangeNodeId}      // 操作类型
+	nodeInfo := []byte{common.ExchangeNodeInfo}    // 操作类型
 	nodeInfo = append(nodeInfo, localNodeIdBuf...) // 节点id
 	nodeInfo = append(nodeInfo, portBuf...)        // TCP服务端口
 	nodeInfo = append(nodeInfo, httpPortBuf...)    // HTTP服务端口
@@ -68,7 +72,7 @@ func handleConnection(c net.Conn) {
 	// 一旦与远程主机连接，立即告知其自己的节点信息
 	_, err := c.Write(nodeInfo)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 		return
 	}
 
@@ -81,7 +85,9 @@ func handleConnection(c net.Conn) {
 		_, err := c.Read(data)
 		if err != nil {
 			if err == io.EOF {
-				log.Println("connection closed by remote:", c.RemoteAddr())
+				if common.LEVEL >= common.WARN {
+					log.Println("connection closed by remote:", c.RemoteAddr())
+				}
 				node.RemoveNodeById(remoteNodeId)
 				return nil, false
 			}
@@ -119,7 +125,7 @@ func handleConnection(c net.Conn) {
 		}
 
 		switch dataType[0] {
-		case common.ExchangeNodeId:
+		case common.ExchangeNodeInfo:
 			// 节点ID
 			nodeIdBuf, success := readBuf()
 			if !success {
@@ -153,7 +159,9 @@ func handleConnection(c net.Conn) {
 				HTTPPort: remoteHTTPPort,
 			}
 			node.AddNode(remoteNode) // 添加节点
-			log.Println("Connected to remote node:", remoteNode)
+			if common.LEVEL >= common.INFO {
+				log.Println("Connected to remote node:", remoteNode)
+			}
 
 			if addr, ok := c.LocalAddr().(*net.TCPAddr); ok {
 				if uint(addr.Port) != common.Port {

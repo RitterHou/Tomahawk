@@ -1,6 +1,7 @@
 package http
 
 import (
+	"../common"
 	"../node"
 	"fmt"
 	"log"
@@ -28,6 +29,8 @@ func StartHttpServer(port uint) {
 		}
 	})
 
-	log.Println("HTTP Server Listening Port", port)
+	if common.LEVEL >= common.INFO {
+		log.Println("HTTP Server Listening Port", port)
+	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))
 }

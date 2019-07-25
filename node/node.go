@@ -16,7 +16,9 @@ func AddNode(node Node) {
 	if node.NodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
+	if common.LEVEL >= common.DEBUG {
+		log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
+	}
 	mutex.Lock()
 	nodes[node.NodeId] = node
 	mutex.Unlock()
@@ -26,7 +28,9 @@ func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
+	if common.LEVEL >= common.DEBUG {
+		log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
+	}
 	mutex.Lock()
 	delete(nodes, nodeId)
 	mutex.Unlock()

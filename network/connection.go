@@ -55,16 +55,34 @@ func handleConnection(c net.Conn) {
 		}
 	}()
 
-	var remoteNodeId string // 此连接所对应的远程节点id
+	var localIp string
+	var isServer bool
+	if addr, ok := c.LocalAddr().(*net.TCPAddr); ok {
+		localIp = addr.IP.String()
+		localPort := uint(addr.Port)
+		// 如果连接的port和本地监听的port一致，则说明这是个server
+		if localPort == common.Port {
+			isServer = true
+		}
+	} else {
+		log.Fatal("Current address convert failed")
+	}
 
-	nodeId := []byte{common.ExchangeNodeId}
-	nodeId = append(nodeId, common.AddBufHead([]byte(common.LocalNodeId))...)
+	currentHost := fmt.Sprintf("%s:%d", localIp, common.Port)
+	log.Println("Current host:", currentHost)
+
+	nodeInfo := []byte{common.ExchangeNodeId}                                     // 操作类型
+	nodeInfo = append(nodeInfo, common.AddBufHead([]byte(common.LocalNodeId))...) // 节点id
+	nodeInfo = append(nodeInfo, common.AddBufHead([]byte(currentHost))...)        // 当前节点的host
+
 	// 一旦与远程主机连接，立即告知其自己的nodeId
-	_, err := c.Write(nodeId)
+	_, err := c.Write(nodeInfo)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+
+	var remoteNodeId string // 此连接所对应的远程节点id
 
 	// 对数据读取做了简单的封装
 	read := func(length uint32) ([]byte, bool) {
@@ -73,7 +91,7 @@ func handleConnection(c net.Conn) {
 		if err != nil {
 			if err == io.EOF {
 				log.Println("connection closed by remote:", c.RemoteAddr())
-				node.RmvNodeById(remoteNodeId)
+				node.RemoveNodeById(remoteNodeId)
 				return nil, false
 			}
 			log.Fatal(err)
@@ -121,6 +139,54 @@ func handleConnection(c net.Conn) {
 			node.AddNode(remoteNode)
 
 			log.Println(remoteNode)
+
+			remoteHostBuf, success := readBuf()
+			if !success {
+				return
+			}
+			// 该连接所对应的远程主机的host
+			// 注意：该host和此连接的remoteAddr不一定一致，因为远程主机有可能是客户端，而我们要求host的端口号必须为节点所监听的port
+			remoteHost := string(remoteHostBuf)
+			log.Println("Current connection remote host:", remoteHost)
+			// 我们需要广播的就是这个客户端的数据，如果是客户端，那么与该客户端相连的节点已经知道这个节点了，不再需要数据广播
+			// 所以只有服务端才需要同步？
+			if isServer {
+				log.Println("I am server")
+				nodes := node.GetNodes()
+				for _, n := range nodes {
+					nodeConn := n.Conn
+					if nodeConn != nil {
+						info := []byte{common.ShareNodes}
+						info = append(info, common.AddBufHead(nodeIdBuf)...)
+						info = append(info, common.AddBufHead(remoteHostBuf)...)
+						_, err := nodeConn.Write(info)
+						if err != nil {
+							log.Fatal(err)
+						}
+					}
+				}
+			}
+		case common.ShareNodes:
+			nodeIdBuf, success := readBuf()
+			if !success {
+				return
+			}
+
+			nodeId := string(nodeIdBuf)
+
+			remoteHostBuf, success := readBuf()
+			if !success {
+				return
+			}
+
+			remoteHost := string(remoteHostBuf)
+
+			if node.NodeExist(nodeId) {
+				log.Println("Remote node has exist in current node:", nodeId)
+			} else {
+				// 只有这个节点不存在于节点列表的时候才需要去连接
+				Connect(remoteHost)
+			}
 		}
 	}
 }

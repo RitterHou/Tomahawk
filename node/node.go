@@ -21,16 +21,7 @@ func AddNode(node Node) {
 	mutex.Unlock()
 }
 
-func RmvNode(node Node) {
-	if node.NodeId == "" {
-		log.Fatal("node id can't be none")
-	}
-	mutex.Lock()
-	delete(nodes, node.NodeId)
-	mutex.Unlock()
-}
-
-func RmvNodeById(nodeId string) {
+func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
@@ -40,16 +31,29 @@ func RmvNodeById(nodeId string) {
 	mutex.Unlock()
 }
 
+func NodeExist(nodeId string) bool {
+	if nodeId == "" {
+		log.Fatal("node id can't be none")
+	}
+	_, ok := nodes[nodeId]
+	return ok
+}
+
 func GetNode(nodeId string) Node {
+	if nodeId == "" {
+		log.Fatal("node id can't be none")
+	}
 	return nodes[nodeId]
 }
 
 func GetNodes() []Node {
-	m := make([]Node, 0, len(nodes))
+	mutex.Lock()
+	n := make([]Node, 0, len(nodes))
 	for _, val := range nodes {
-		m = append(m, val)
+		n = append(n, val)
 	}
-	return m
+	mutex.Unlock()
+	return n
 }
 
 type Node struct {

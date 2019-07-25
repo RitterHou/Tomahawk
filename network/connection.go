@@ -209,6 +209,9 @@ func handleConnection(c net.Conn) {
 			if !node.ExistNode(nodeId) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
+		case common.AppendEntries:
+			// 暂时只发送心跳，不发送数据
+			common.HeartbeatTimeoutCh <- true
 		}
 	}
 }

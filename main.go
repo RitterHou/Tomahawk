@@ -38,16 +38,21 @@ func init() {
 }
 
 func main() {
+	if common.LogLevel(common.DEBUG) {
+		log.Printf("Host seeds %v\n", common.Hosts)
+	}
+
 	node.AddNode(node.Node{
 		NodeId:   common.LocalNodeId,
 		TCPPort:  uint32(common.Port),
 		HTTPPort: uint32(common.HTTPPort),
 	})
 
-	go network.Listen(common.Port)
+	// 先连接，后启动监听，主要是为了防止连接到自己
 	for _, host := range common.Hosts {
 		network.Connect(host)
 	}
+	go network.Listen(common.Port)
 
 	go election.Do()
 	http.StartHttpServer(common.HTTPPort)

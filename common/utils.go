@@ -57,3 +57,8 @@ func ParseBuf(buf []byte) ([]byte, uint32) {
 		return body, offset
 	}
 }
+
+// 判断日志等级
+func LogLevel(level byte) bool {
+	return LEVEL >= level
+}

@@ -16,7 +16,7 @@ func Connect(host string) {
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
 		if err.Error() == "dial tcp "+host+": connect: connection refused" {
-			if common.LEVEL >= common.WARN {
+			if common.LogLevel(common.WARN) {
 				log.Println("Connection refused by node:", host)
 			}
 			return
@@ -33,7 +33,7 @@ func Listen(port uint) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if common.LEVEL >= common.INFO {
+	if common.LogLevel(common.INFO) {
 		log.Println("TCP Server Listening Port", port)
 	}
 	defer func() {
@@ -160,7 +160,7 @@ func handleConnection(c net.Conn) {
 				HTTPPort: remoteHTTPPort,
 			}
 			node.AddNode(remoteNode) // 添加节点
-			if common.LEVEL >= common.INFO {
+			if common.LogLevel(common.INFO) {
 				log.Println("Connected to remote node:", remoteNode)
 			}
 
@@ -238,7 +238,7 @@ func handleConnection(c net.Conn) {
 			term := binary.LittleEndian.Uint32(termBuf)
 			var response = []byte{common.VoteResponse}
 
-			if common.LEVEL >= common.DEBUG {
+			if common.LogLevel(common.DEBUG) {
 				log.Printf("%s(me) term %d -> remote %s term %d ",
 					common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
 			}

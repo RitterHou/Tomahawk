@@ -33,7 +33,7 @@ func StartHttpServer(port uint) {
 		}
 	})
 
-	if common.LEVEL >= common.INFO {
+	if common.LogLevel(common.INFO) {
 		log.Println("HTTP Server Listening Port", port)
 	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))

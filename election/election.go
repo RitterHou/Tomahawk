@@ -15,7 +15,7 @@ func Do() {
 			select {
 			case <-common.HeartbeatTimeoutCh:
 				if common.LEVEL >= common.DEBUG {
-					log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
+					//log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
 				}
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
 				common.Role = common.Candidate // 更新为候选人
@@ -27,11 +27,11 @@ func Do() {
 			common.CurrentTerm += 1
 			common.Votes = 1 // 首先投票给自己
 
-			if common.Votes >= uint32(len(node.GetNodes())/2) {
+			nodes := node.GetNodes()
+			if len(nodes) == 1 {
 				common.VoteSuccessCh <- true
 			} else {
 				// 给所有的节点发送投票请求
-				nodes := node.GetNodes()
 				for _, n := range nodes {
 					if n.Conn != nil {
 						data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
@@ -51,6 +51,21 @@ func Do() {
 					if common.LEVEL >= common.DEBUG {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
 					}
+					common.LeaderNodeId = common.LocalNodeId // 当前节点为leader节点
+
+					data := []byte{common.AppendEntries}
+					data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)
+					// 发送心跳数据，防止follower超时
+					nodes := node.GetNodes()
+					for _, n := range nodes {
+						if n.Conn != nil {
+							_, err := n.Conn.Write(data)
+							if err != nil {
+								log.Fatal(err)
+							}
+						}
+					}
+					common.LeaderSendEntryCh <- true
 				} else {
 					common.Role = common.Follower
 					if common.LEVEL >= common.DEBUG {
@@ -71,7 +86,7 @@ func Do() {
 				}
 			case <-time.After(common.LeaderCycleTimeout * time.Millisecond):
 				if common.LEVEL >= common.DEBUG {
-					log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
+					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				data := []byte{common.AppendEntries}
 				data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)

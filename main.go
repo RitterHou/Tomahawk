@@ -27,7 +27,7 @@ func init() {
 		os.Exit(0)
 	}
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
 	log.SetOutput(os.Stdout)
 
 	flag.UintVar(&common.Port, "port", 6300, "Bind port")

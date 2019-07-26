@@ -218,13 +218,17 @@ func handleConnection(c net.Conn) {
 			term := binary.LittleEndian.Uint32(termBuf)
 
 			if common.Role == common.Candidate {
+				// 虽然我是候选人，但是别人的任期比我高，我选举失败重新变成follower
 				if term >= common.CurrentTerm {
 					common.VoteSuccessCh <- false
 					common.CurrentTerm = term
+					common.LeaderNodeId = remoteNodeId // 设置leader节点
 				}
 			} else {
+				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
 				common.CurrentTerm = term
+				common.LeaderNodeId = remoteNodeId // 设置leader节点
 			}
 		case common.VoteRequest:
 			termBuf, success := read(4)
@@ -233,13 +237,19 @@ func handleConnection(c net.Conn) {
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
 			var response = []byte{common.VoteResponse}
+
+			if common.LEVEL >= common.DEBUG {
+				log.Printf("%s(me) term %d -> remote %s term %d ",
+					common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
+			}
+
 			// 大于当前的任期
 			if term > common.CurrentTerm {
 				common.CurrentTerm = term
 				common.Role = common.Follower
-				response = append(response, byte(1))
+				response = append(response, byte(1)) // 投票
 			} else {
-				response = append(response, byte(0))
+				response = append(response, byte(0)) // 不投票
 			}
 			_, err := c.Write(response)
 			if err != nil {
@@ -253,7 +263,7 @@ func handleConnection(c net.Conn) {
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
-				if common.Votes >= uint32(len(node.GetNodes())/2) {
+				if common.Votes > uint32(len(node.GetNodes())/2) {
 					common.VoteSuccessCh <- true
 				}
 			}

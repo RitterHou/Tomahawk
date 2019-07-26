@@ -22,7 +22,11 @@ func StartHttpServer(port uint) {
 		nodes := node.GetNodes()
 		sort.Sort(nodes) // 对节点列表进行排序
 		for _, n := range nodes {
-			_, err := fmt.Fprintf(w, "%10s %15s:%-5d\n", n.NodeId, n.Ip, n.HTTPPort)
+			star := " "
+			if n.NodeId == common.LeaderNodeId {
+				star = "*"
+			}
+			_, err := fmt.Fprintf(w, "%s %10s %15s:%-5d\n", star, n.NodeId, n.Ip, n.HTTPPort)
 			if err != nil {
 				log.Fatal(err)
 			}

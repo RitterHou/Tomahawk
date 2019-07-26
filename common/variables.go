@@ -67,3 +67,6 @@ var (
 	CurrentTerm uint32 = 0 // 当前任期
 	Votes       uint32 = 0 // 获取选票数
 )
+
+// leader节点的id
+var LeaderNodeId string

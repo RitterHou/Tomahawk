@@ -1,0 +1,33 @@
+language: go
+go:
+  - "1.12.5"
+
+notifications:
+  email: false
+
+before_install:
+  # 把项目文件夹移到GOPATH之外，以方便使用相对路径引入
+  - mkdir /home/travis/Tomahawk
+  - cp -R /home/travis/gopath/src/github.com/RitterHou/Tomahawk /home/travis
+  - cd /home/travis/Tomahawk
+
+# 跳过install阶段
+install: true
+
+script:
+  - ./build.sh
+
+before_deploy:
+  - mkdir build
+  - mv Tomahawk.exe ./build
+  - mv Tomahawk_Linux ./build
+  - mv Tomahawk_Darwin ./build
+
+deploy:
+  provider: releases
+  api_key: ${GH_TOKEN}
+  file_glob: true
+  file: build/*
+  skip_cleanup: true
+  on:
+    tags: true

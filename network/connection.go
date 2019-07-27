@@ -3,6 +3,7 @@ package network
 import (
 	"../common"
 	"../node"
+	"../tog"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -16,13 +17,14 @@ func Connect(host string) {
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
 		if err.Error() == "dial tcp "+host+": connect: connection refused" {
-			if common.LogLevel(common.WARN) {
+			if tog.LogLevel(tog.WARN) {
 				log.Println("Connection refused by node:", host)
 			}
 			return
 		}
 		log.Fatal(err)
 	}
+	node.UpdateLocalIp(conn) // 主动连接别的节点时，可以更新当前节点的IP地址
 	go handleConnection(conn)
 }
 
@@ -33,7 +35,7 @@ func Listen(port uint) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if common.LogLevel(common.INFO) {
+	if tog.LogLevel(tog.INFO) {
 		log.Println("TCP Server Listening Port", port)
 	}
 	defer func() {
@@ -48,6 +50,7 @@ func Listen(port uint) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		node.UpdateLocalIp(conn) // 当别的节点连接自己时，可以更新当前节点的IP地址
 		go handleConnection(conn)
 	}
 }
@@ -86,7 +89,7 @@ func handleConnection(c net.Conn) {
 		_, err := c.Read(data)
 		if err != nil {
 			if err == io.EOF {
-				if common.LEVEL >= common.WARN {
+				if tog.LEVEL >= tog.WARN {
 					log.Println("connection closed by remote:", c.RemoteAddr())
 				}
 				node.RemoveNodeById(remoteNodeId)
@@ -160,7 +163,7 @@ func handleConnection(c net.Conn) {
 				HTTPPort: remoteHTTPPort,
 			}
 			node.AddNode(remoteNode) // 添加节点
-			if common.LogLevel(common.INFO) {
+			if tog.LogLevel(tog.INFO) {
 				log.Println("Connected to remote node:", remoteNode)
 			}
 
@@ -238,7 +241,7 @@ func handleConnection(c net.Conn) {
 			term := binary.LittleEndian.Uint32(termBuf)
 			var response = []byte{common.VoteResponse}
 
-			if common.LogLevel(common.DEBUG) {
+			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) term %d -> remote %s term %d ",
 					common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
 			}

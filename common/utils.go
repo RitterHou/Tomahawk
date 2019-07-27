@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"math/rand"
+	"net"
 	"time"
 )
 
@@ -58,7 +59,40 @@ func ParseBuf(buf []byte) ([]byte, uint32) {
 	}
 }
 
-// 判断日志等级
-func LogLevel(level byte) bool {
-	return LEVEL >= level
+// 获取本地的网卡IP地址（可能不准确，因为无法保证数据包一定是从这块网卡发出去的）
+func GetLocalIp() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	for _, i := range interfaces {
+		if i.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if i.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addresses, err := i.Addrs()
+		if err != nil {
+			return ""
+		}
+		for _, addr := range addresses {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue // not an ipv4 address
+			}
+			return ip.String()
+		}
+	}
+	return ""
 }

@@ -2,9 +2,11 @@ package node
 
 import (
 	"../common"
+	"../tog"
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -16,7 +18,7 @@ func AddNode(node Node) {
 	if node.NodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	if common.LogLevel(common.DEBUG) {
+	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
 	}
 	mutex.Lock()
@@ -28,7 +30,7 @@ func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	if common.LogLevel(common.DEBUG) {
+	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
 	}
 	mutex.Lock()
@@ -85,4 +87,28 @@ type Node struct {
 func (node Node) String() string {
 	return fmt.Sprintf("{id: %s, connection: %s -> %s, ip: %s, port: %d, http: %d}",
 		node.NodeId, node.Conn.LocalAddr(), node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort)
+}
+
+// IP是否已经被更新
+var ipUpdated = false
+
+// 因为本地的IP可能不一定准确，所以如果有网络连接就可以更新本地IP
+func UpdateLocalIp(conn net.Conn) {
+	if !ipUpdated {
+		ip := strings.Split(conn.LocalAddr().String(), ":")[0]
+		ipUpdated = true
+
+		nodes := GetNodes()
+		for _, n := range nodes {
+			if n.NodeId == common.LocalNodeId {
+				if tog.LogLevel(tog.DEBUG) {
+					log.Printf("Update local Ip from %s to %s\n", n.Ip, ip)
+				}
+				n.Ip = ip
+				AddNode(n)
+				break
+			}
+		}
+
+	}
 }

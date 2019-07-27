@@ -6,6 +6,7 @@ import (
 	"./http"
 	"./network"
 	"./node"
+	"./tog"
 	"flag"
 	"fmt"
 	"log"
@@ -38,7 +39,7 @@ func init() {
 }
 
 func main() {
-	if common.LogLevel(common.DEBUG) {
+	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("Host seeds %v\n", common.Hosts)
 	}
 
@@ -46,6 +47,7 @@ func main() {
 		NodeId:   common.LocalNodeId,
 		TCPPort:  uint32(common.Port),
 		HTTPPort: uint32(common.HTTPPort),
+		Ip:       common.GetLocalIp(),
 	})
 
 	// 先连接，后启动监听，主要是为了防止连接到自己

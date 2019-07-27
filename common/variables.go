@@ -45,16 +45,6 @@ var (
 	LeaderSendEntryCh  = make(chan bool, 1) // leader发送了信息的channel
 )
 
-// 日志等级
-var LEVEL = DEBUG
-
-const (
-	ERROR byte = iota
-	WARN
-	INFO
-	DEBUG
-)
-
 const (
 	HeartbeatTimeoutMin = 150
 	HeartbeatTimeoutMax = 300

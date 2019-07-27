@@ -3,6 +3,7 @@ package election
 import (
 	"../common"
 	"../node"
+	"../tog"
 	"log"
 	"time"
 )
@@ -14,12 +15,12 @@ func Do() {
 			heartbeatTimeout := common.RandomInt(common.HeartbeatTimeoutMin, common.HeartbeatTimeoutMax)
 			select {
 			case <-common.HeartbeatTimeoutCh:
-				if common.LogLevel(common.DEBUG) {
+				if tog.LogLevel(tog.DEBUG) {
 					//log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
 				}
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
 				common.Role = common.Candidate // 更新为候选人
-				if common.LogLevel(common.DEBUG) {
+				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) heartbeat timeout and become candidate\n", common.LocalNodeId)
 				}
 			}
@@ -48,7 +49,7 @@ func Do() {
 			case success := <-common.VoteSuccessCh:
 				if success {
 					common.Role = common.Leader
-					if common.LogLevel(common.DEBUG) {
+					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
 					}
 					common.LeaderNodeId = common.LocalNodeId // 当前节点为leader节点
@@ -68,12 +69,12 @@ func Do() {
 					common.LeaderSendEntryCh <- true
 				} else {
 					common.Role = common.Follower
-					if common.LogLevel(common.DEBUG) {
+					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote failed and becmoe follower\n", common.LocalNodeId)
 					}
 				}
 			case <-time.After(time.Duration(electionTimeout) * time.Millisecond):
-				if common.LogLevel(common.DEBUG) {
+				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) this turn election failed, next turn election will start soon\n",
 						common.LocalNodeId)
 				}
@@ -81,11 +82,11 @@ func Do() {
 		case common.Leader:
 			select {
 			case <-common.LeaderSendEntryCh:
-				if common.LogLevel(common.DEBUG) {
+				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) leader has sent data to followers\n", common.LocalNodeId)
 				}
 			case <-time.After(common.LeaderCycleTimeout * time.Millisecond):
-				if common.LogLevel(common.DEBUG) {
+				if tog.LogLevel(tog.DEBUG) {
 					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				data := []byte{common.AppendEntries}

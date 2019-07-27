@@ -3,6 +3,7 @@ package http
 import (
 	"../common"
 	"../node"
+	"../tog"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,7 +15,7 @@ func StartHttpServer(port uint) {
 	// 显示所有的节点信息
 	http.HandleFunc("/nodes", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		_, err := fmt.Fprintln(w, "     NodeId      Host")
+		_, err := fmt.Fprintln(w, "       NodeId      Host")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -26,14 +27,18 @@ func StartHttpServer(port uint) {
 			if n.NodeId == common.LeaderNodeId {
 				star = "*"
 			}
-			_, err := fmt.Fprintf(w, "%s %10s %15s:%-5d\n", star, n.NodeId, n.Ip, n.HTTPPort)
+			me := " "
+			if n.NodeId == common.LocalNodeId {
+				me = "▴"
+			}
+			_, err := fmt.Fprintf(w, "%s%s %10s %15s:%-5d\n", star, me, n.NodeId, n.Ip, n.HTTPPort)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	})
 
-	if common.LogLevel(common.INFO) {
+	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
 	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))

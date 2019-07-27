@@ -12,4 +12,6 @@
 *.out
 
 /.idea
-Tomahawk
+Tomahawk.exe
+Tomahawk_Linux
+Tomahawk_Darwin

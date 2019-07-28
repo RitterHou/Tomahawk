@@ -12,6 +12,6 @@
 *.out
 
 /.idea
-Tomahawk.exe
-Tomahawk_Linux
-Tomahawk_Darwin
+
+Tomahawk*
+/build

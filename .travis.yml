@@ -16,13 +16,11 @@ before_install:
 install: true
 
 script:
-  - ./build.sh
+  - ./build.sh --release
 
 before_deploy:
   - mkdir build
-  - mv Tomahawk.exe ./build
-  - mv Tomahawk_Linux ./build
-  - mv Tomahawk_Darwin ./build
+  - mv Tomahawk* ./build
 
 deploy:
   provider: releases

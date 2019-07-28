@@ -2,8 +2,13 @@
 
 case $1 in
 --release|-r)
-    flags="-s -w -X 'main.buildStamp=$(date '+%Y-%m-%d %H:%M:%S')' -X main.version=v1.0.0 -X 'main.goVersion=$(go version)'"
-     echo "Build flags: ${flags}"
+
+    # 获取最新的tag
+    git fetch --tags
+    latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+
+    flags="-s -w -X 'main.buildStamp=$(date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
+    echo "Build flags: ${flags}"
 
     start_time=`date +%s`
 

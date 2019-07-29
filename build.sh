@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 
 case $1 in
---release|-r)
 
+# 编译指定的平台
+--cross|-c)
+    IFS=':' read -ra p <<< "$2"
+    os=${p[0]}
+    arch=${p[1]}
+    # 执行编译
+    CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} go build -o Tomahawk_${os}_${arch}
+    echo Tomahawk_${os}_${arch}
+    ;;
+
+# 编译所有的平台
+--release|-r)
     # 获取最新的tag
     git fetch --tags
     latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
@@ -60,6 +71,8 @@ case $1 in
     cost=$[$end_time-$start_time]
     echo "Build success, cost ${cost} second(s)"
     ;;
+
+# 编译当前平台
 *)
     go build
     ;;

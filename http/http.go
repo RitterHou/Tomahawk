@@ -14,7 +14,7 @@ import (
 func StartHttpServer(port uint) {
 	// 显示所有的节点信息
 	http.HandleFunc("/nodes", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		_, err := fmt.Fprintln(w, "       NodeId      Host")
 		if err != nil {
 			log.Fatal(err)

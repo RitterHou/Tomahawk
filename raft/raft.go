@@ -1,4 +1,4 @@
-package election
+package raft
 
 import (
 	"../common"
@@ -20,7 +20,8 @@ func sendDataToFollowers(nodes []node.Node, data []byte) {
 	}
 }
 
-func Do() {
+// 执行Raft协议
+func Run() {
 	for {
 		switch common.Role {
 		case common.Follower:

@@ -2,10 +2,10 @@ package main
 
 import (
 	"./common"
-	"./election"
 	"./http"
 	"./network"
 	"./node"
+	"./raft"
 	"./tog"
 	"flag"
 	"fmt"
@@ -56,6 +56,6 @@ func main() {
 	}
 	go network.Listen(common.Port)
 
-	go election.Do()
+	go raft.Run()
 	http.StartHttpServer(common.HTTPPort)
 }

@@ -230,8 +230,8 @@ func handleConnection(c net.Conn) {
 			switch common.Role {
 			case common.Leader:
 				if tog.LogLevel(tog.WARN) {
-					log.Printf("Remote %s(%d) < local %s(%d) but local is leader\n",
-						remoteNodeId, term, common.LocalNodeId, common.CurrentTerm)
+					log.Printf("local %s(%d) is leader but remote %s(%d) sent entries\n",
+						common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
 				}
 			case common.Candidate:
 				// 虽然我是候选人，但是别人的任期比我高，我选举失败重新变成follower

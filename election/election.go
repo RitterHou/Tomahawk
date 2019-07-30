@@ -8,6 +8,18 @@ import (
 	"time"
 )
 
+// 给所有的节点发送数据
+func sendDataToFollowers(nodes []node.Node, data []byte) {
+	for _, n := range nodes {
+		if n.Conn != nil {
+			_, err := n.Conn.Write(data)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+}
+
 func Do() {
 	for {
 		switch common.Role {
@@ -32,16 +44,9 @@ func Do() {
 			if len(nodes) == 1 {
 				common.VoteSuccessCh <- true
 			} else {
-				// 给所有的节点发送投票请求
-				for _, n := range nodes {
-					if n.Conn != nil {
-						data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
-						_, err := n.Conn.Write(data)
-						if err != nil {
-							log.Fatal(err)
-						}
-					}
-				}
+				// 发送选举请求
+				data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
+				sendDataToFollowers(nodes, data)
 			}
 
 			electionTimeout := common.RandomInt(common.ElectionTimeoutMin, common.ElectionTimeoutMax)
@@ -54,18 +59,11 @@ func Do() {
 					}
 					common.LeaderNodeId = common.LocalNodeId // 当前节点为leader节点
 
-					data := []byte{common.AppendEntries}
-					data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)
-					// 发送心跳数据，防止follower超时
+					// 选举成功立即发送心跳
+					data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
 					nodes := node.GetNodes()
-					for _, n := range nodes {
-						if n.Conn != nil {
-							_, err := n.Conn.Write(data)
-							if err != nil {
-								log.Fatal(err)
-							}
-						}
-					}
+					sendDataToFollowers(nodes, data)
+
 					common.LeaderSendEntryCh <- true
 				} else {
 					common.Role = common.Follower
@@ -89,18 +87,10 @@ func Do() {
 				if tog.LogLevel(tog.DEBUG) {
 					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
-				data := []byte{common.AppendEntries}
-				data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)
-				// 发送心跳数据，防止follower超时
+				// 超时则发送心跳
+				data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
 				nodes := node.GetNodes()
-				for _, n := range nodes {
-					if n.Conn != nil {
-						_, err := n.Conn.Write(data)
-						if err != nil {
-							log.Fatal(err)
-						}
-					}
-				}
+				sendDataToFollowers(nodes, data)
 			}
 		}
 	}

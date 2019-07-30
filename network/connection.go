@@ -220,14 +220,27 @@ func handleConnection(c net.Conn) {
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
 
-			if common.Role == common.Candidate {
+			if term < common.CurrentTerm {
+				if tog.LogLevel(tog.WARN) {
+					log.Printf("Remote %s(%d) < local %s(%d) but sent entries\n",
+						remoteNodeId, term, common.LocalNodeId, common.CurrentTerm)
+				}
+			}
+
+			switch common.Role {
+			case common.Leader:
+				if tog.LogLevel(tog.WARN) {
+					log.Printf("Remote %s(%d) < local %s(%d) but local is leader\n",
+						remoteNodeId, term, common.LocalNodeId, common.CurrentTerm)
+				}
+			case common.Candidate:
 				// 虽然我是候选人，但是别人的任期比我高，我选举失败重新变成follower
 				if term >= common.CurrentTerm {
 					common.VoteSuccessCh <- false
 					common.CurrentTerm = term
 					common.LeaderNodeId = remoteNodeId // 设置leader节点
 				}
-			} else {
+			case common.Follower:
 				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
 				common.CurrentTerm = term

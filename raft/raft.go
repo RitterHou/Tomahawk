@@ -40,6 +40,7 @@ func Run() {
 		case common.Candidate: // 最复杂 1.成为leader; 2.成为follower; 3.继续下一轮选举
 			common.CurrentTerm += 1
 			common.Votes = 1 // 首先投票给自己
+			common.VoteFor[common.CurrentTerm] = common.LocalNodeId
 
 			nodes := node.GetNodes()
 			if len(nodes) == 1 {

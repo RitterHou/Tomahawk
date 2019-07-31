@@ -28,6 +28,10 @@ func init() {
 		os.Exit(0)
 	}
 
+	common.BuildStamp = buildStamp
+	common.Version = version
+	common.GoVersion = goVersion
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
 	log.SetOutput(os.Stdout)
 

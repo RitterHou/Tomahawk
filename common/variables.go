@@ -1,5 +1,11 @@
 package common
 
+var (
+	BuildStamp string
+	Version    string
+	GoVersion  string
+)
+
 // 数组类型的flag
 type arrayFlag []string
 
@@ -60,3 +66,32 @@ var (
 
 // leader节点的id
 var LeaderNodeId string
+
+// 投票信息 key为term，value为nodeId
+var VoteFor = make(map[uint32]string)
+
+// 一条数据
+type Entry struct {
+	Key   string
+	Value string
+}
+
+// 已经提交的entry索引
+var Committed = uint32(0)
+
+// 所有的数据
+var entries = make([]Entry, 0)
+
+// 添加一条数据
+func AppendEntry(key, value string) {
+	entries = append(entries, Entry{Key: key, Value: value})
+}
+
+func GetEntryByKey(key string) string {
+	for i := len(entries); i > 0; i-- {
+		if entries[i].Key == key {
+			return entries[i].Value
+		}
+	}
+	return ""
+}

@@ -74,17 +74,19 @@ var VoteFor = make(map[uint32]string)
 type Entry struct {
 	Key   string
 	Value string
+	Term  uint32 // 添加该条数据时的任期号
 }
 
 // 已经提交的entry索引
-var Committed = uint32(0)
+var CommittedIndex = uint32(0)
+var AppliedIndex = uint32(0)
 
 // 所有的数据
 var entries = make([]Entry, 0)
 
 // 添加一条数据
 func AppendEntry(key, value string) {
-	entries = append(entries, Entry{Key: key, Value: value})
+	entries = append(entries, Entry{Key: key, Value: value, Term: CurrentTerm})
 }
 
 func GetEntryByKey(key string) string {

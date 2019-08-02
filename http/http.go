@@ -87,6 +87,27 @@ func StartHttpServer(port uint) {
 			}
 			key := r.Form.Get("key")
 			value := r.Form.Get("value")
+
+			if common.LocalNodeId != common.LeaderNodeId {
+				leaderHttp := ""
+				for _, n := range node.GetNodes() {
+					if n.NodeId == common.LeaderNodeId {
+						leaderHttp = fmt.Sprintf("http://%s:%d/", n.Ip, n.HTTPPort)
+					}
+				}
+				_, err = fmt.Fprintf(w, `This node is not leader, please post data to leader %s: %s`,
+					common.LeaderNodeId, leaderHttp)
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			}
+
+			common.AppendEntry(key, value)
+			for _, n := range node.GetNodes() {
+
+			}
+
 			_, err = fmt.Fprintf(w, `Post Success: {"%s": "%s"}`, key, value)
 			if err != nil {
 				log.Fatal(err)

@@ -24,15 +24,17 @@ var (
 	Port        uint      // 监听的端口
 	HTTPPort    uint      // HTTP服务监听的端口
 	Hosts       arrayFlag // 种子节点
+	Quorum      uint      // 所谓的“大多数”
 )
 
 // 网络传输的数据类型
 const (
-	ExchangeNodeInfo byte = iota // 传输的数据为节点信息
-	ShareNodes                   // 共享节点信息
-	AppendEntries                // leader向follower发送数据
-	VoteRequest                  // 投票的请求
-	VoteResponse                 // 投票的响应
+	ExchangeNodeInfo      byte = iota // 传输的数据为节点信息
+	ShareNodes                        // 共享节点信息
+	AppendEntries                     // leader向follower发送数据
+	AppendEntriesResponse             // follower收到数据之后返回响应
+	VoteRequest                       // 投票的请求
+	VoteResponse                      // 投票的响应
 )
 
 var Role = Follower
@@ -89,6 +91,7 @@ func AppendEntry(key, value string) {
 	entries = append(entries, Entry{Key: key, Value: value, Term: CurrentTerm})
 }
 
+// 根据key获取entry
 func GetEntryByKey(key string) string {
 	for i := len(entries); i > 0; i-- {
 		if entries[i].Key == key {
@@ -97,3 +100,19 @@ func GetEntryByKey(key string) string {
 	}
 	return ""
 }
+
+// 作为leader
+var (
+	nextIndexMap  = make(map[string]uint32) // 需要发送给指定follower的下一个log entry下标
+	matchIndexMap = make(map[string]uint32) // 针对指定follower，已经复制的最大的log entry下标
+)
+
+// AppendEntries
+var (
+	leaderTerm        uint32
+	leaderId          string
+	prevLogIndex      uint32  // 剔除entries最新的log的index
+	prevLogTerm       uint32  // 剔除entries最新的log的term
+	entries0          []Entry // 发送的entries，可以为空（心跳）
+	leaderCommitIndex uint32  // leader的commitIndex
+)

@@ -39,6 +39,7 @@ func init() {
 	flag.UintVar(&common.HTTPPort, "http", 6200, "HTTP server bind port")
 	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id")
 	flag.Var(&common.Hosts, "hosts", "Seed hosts")
+	flag.UintVar(&common.Quorum, "quorum", 1, "At we know, most of the nodes")
 	flag.Parse()
 }
 

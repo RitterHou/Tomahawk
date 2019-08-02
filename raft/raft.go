@@ -43,7 +43,7 @@ func Run() {
 			common.VoteFor[common.CurrentTerm] = common.LocalNodeId
 
 			nodes := node.GetNodes()
-			if len(nodes) == 1 {
+			if len(nodes) == 1 { // 单个节点的情况
 				common.VoteSuccessCh <- true
 			} else {
 				// 发送选举请求

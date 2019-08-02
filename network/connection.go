@@ -246,6 +246,8 @@ func handleConnection(c net.Conn) {
 				common.CurrentTerm = term
 				common.LeaderNodeId = remoteNodeId // 设置leader节点
 			}
+		case common.AppendEntriesResponse:
+
 		case common.VoteRequest:
 			termBuf, success := read(4)
 			if !success {
@@ -279,7 +281,7 @@ func handleConnection(c net.Conn) {
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
-				if common.Votes > uint32(len(node.GetNodes())/2) {
+				if common.Votes > uint32(common.Quorum) {
 					common.VoteSuccessCh <- true
 				}
 			}

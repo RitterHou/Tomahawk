@@ -77,6 +77,7 @@ type Entry struct {
 	Key   string
 	Value string
 	Term  uint32 // 添加该条数据时的任期号
+	Index uint32 // 在log中的索引
 }
 
 // 已经提交的entry索引
@@ -88,7 +89,7 @@ var entries = make([]Entry, 0)
 
 // 添加一条数据
 func AppendEntry(key, value string) {
-	entries = append(entries, Entry{Key: key, Value: value, Term: CurrentTerm})
+	entries = append(entries, Entry{Key: key, Value: value, Term: CurrentTerm, Index: uint32(len(entries))})
 }
 
 // 根据key获取entry
@@ -101,18 +102,26 @@ func GetEntryByKey(key string) string {
 	return ""
 }
 
+func GetLastEntry() Entry {
+	return entries[len(entries)-1]
+}
+
 // 作为leader
 var (
 	nextIndexMap  = make(map[string]uint32) // 需要发送给指定follower的下一个log entry下标
 	matchIndexMap = make(map[string]uint32) // 针对指定follower，已经复制的最大的log entry下标
 )
 
+var (
+	PrevLogIndex uint32 // 剔除entries最新的log的index
+	PrevLogTerm  uint32 // 剔除entries最新的log的term
+)
+
 // AppendEntries
 var (
-	leaderTerm        uint32
-	leaderId          string
-	prevLogIndex      uint32  // 剔除entries最新的log的index
-	prevLogTerm       uint32  // 剔除entries最新的log的term
+	leaderTerm uint32
+	leaderId   string
+
 	entries0          []Entry // 发送的entries，可以为空（心跳）
 	leaderCommitIndex uint32  // leader的commitIndex
 )

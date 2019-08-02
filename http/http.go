@@ -104,6 +104,7 @@ func StartHttpServer(port uint) {
 			}
 
 			common.AppendEntry(key, value)
+			common.LeaderSendEntryCh <- true // leader向follower发送数据，此周期内不再需要主动发送心跳
 			for _, n := range node.GetNodes() {
 
 			}

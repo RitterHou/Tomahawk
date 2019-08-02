@@ -214,16 +214,43 @@ func handleConnection(c net.Conn) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
 		case common.AppendEntries:
-			termBuf, success := read(4)
+			leaderTermBuf, success := read(4)
 			if !success {
 				return
 			}
-			term := binary.LittleEndian.Uint32(termBuf)
+			leaderTerm := binary.LittleEndian.Uint32(leaderTermBuf)
 
-			if term < common.CurrentTerm {
+			leaderPrevLogIndexBuf, success := read(4)
+			if !success {
+				return
+			}
+			leaderPrevLogIndex := binary.LittleEndian.Uint32(leaderPrevLogIndexBuf)
+
+			leaderPrevLogTermBuf, success := read(4)
+			if !success {
+				return
+			}
+			leaderPrevLogTerm := binary.LittleEndian.Uint32(leaderPrevLogTermBuf)
+
+			leaderCommittedIndexBuf, success := read(4)
+			if !success {
+				return
+			}
+			leaderCommittedIndex := binary.LittleEndian.Uint32(leaderCommittedIndexBuf)
+
+			appendEntriesLengthBuf, success := read(4)
+			if !success {
+				return
+			}
+			appendEntriesLength := binary.LittleEndian.Uint32(appendEntriesLengthBuf)
+			for i := uint32(0); i < appendEntriesLength; i++ {
+				// TODO 对Entry进行解码，目前因为只考虑心跳，长度皆为零所以暂时不需要
+			}
+
+			if leaderTerm < common.CurrentTerm {
 				if tog.LogLevel(tog.WARN) {
 					log.Printf("Remote %s(%d) < local %s(%d) but sent entries\n",
-						remoteNodeId, term, common.LocalNodeId, common.CurrentTerm)
+						remoteNodeId, leaderTerm, common.LocalNodeId, common.CurrentTerm)
 				}
 			}
 
@@ -231,44 +258,101 @@ func handleConnection(c net.Conn) {
 			case common.Leader:
 				if tog.LogLevel(tog.WARN) {
 					log.Printf("local %s(%d) is leader but remote %s(%d) sent entries\n",
-						common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
+						common.LocalNodeId, common.CurrentTerm, remoteNodeId, leaderTerm)
 				}
 			case common.Candidate:
 				// 虽然我是候选人，但是别人的任期比我高，我选举失败重新变成follower
-				if term >= common.CurrentTerm {
+				if leaderTerm >= common.CurrentTerm {
 					common.VoteSuccessCh <- false
-					common.CurrentTerm = term
+					common.CurrentTerm = leaderTerm
 					common.LeaderNodeId = remoteNodeId // 设置leader节点
 				}
 			case common.Follower:
 				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
-				common.CurrentTerm = term
+				common.CurrentTerm = leaderTerm
 				common.LeaderNodeId = remoteNodeId // 设置leader节点
 			}
-		case common.AppendEntriesResponse:
 
-		case common.VoteRequest:
+			// AppendEntries的响应
+			var response = []byte{common.AppendEntriesResponse}
+			if true {
+				response = append(response, byte(1))
+			} else {
+				response = append(response, byte(0))
+			}
+
+			response = append(response, common.Uint32ToBytes(common.CurrentTerm)...)
+			_, err := c.Write(response)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case common.AppendEntriesResponse:
+			resSuccessBuf, success := read(1)
+			if !success {
+				return
+			}
+			resSuccess := true
+			if resSuccessBuf[0] == 0 {
+				resSuccess = false
+			}
+
 			termBuf, success := read(4)
 			if !success {
 				return
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
-			var response = []byte{common.VoteResponse}
+
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("AppendEntriesResponse, term: %d, success: %t\n", term, resSuccess)
+			}
+		case common.VoteRequest:
+			candidateTermBuf, success := read(4)
+			if !success {
+				return
+			}
+			candidateTerm := binary.LittleEndian.Uint32(candidateTermBuf)
+
+			lastEntryIndexBuf, success := read(4)
+			if !success {
+				return
+			}
+			lastEntryIndex := binary.LittleEndian.Uint32(lastEntryIndexBuf)
+
+			lastEntryTermBuf, success := read(4)
+			if !success {
+				return
+			}
+			lastEntryTerm := binary.LittleEndian.Uint32(lastEntryTermBuf)
 
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) term %d -> remote %s term %d ",
-					common.LocalNodeId, common.CurrentTerm, remoteNodeId, term)
+					common.LocalNodeId, common.CurrentTerm, remoteNodeId, candidateTerm)
 			}
 
+			voteSuccess := false
+
 			// 大于当前的任期
-			if term > common.CurrentTerm {
-				common.CurrentTerm = term
-				common.Role = common.Follower
+			if candidateTerm >= common.CurrentTerm {
+				common.CurrentTerm = candidateTerm
+				// 尚未投票或者投给了candidate
+				if nodeId, ok := common.VoteFor[candidateTerm]; !ok || nodeId == remoteNodeId {
+					// candidate的最新数据比当前节点的数据要新
+					lastEntry := common.GetLastEntry()
+					if lastEntryIndex >= lastEntry.Index && lastEntryTerm >= lastEntry.Term {
+						voteSuccess = true
+					}
+				}
+			}
+
+			var response = []byte{common.VoteResponse}
+			if voteSuccess {
 				response = append(response, byte(1)) // 投票
 			} else {
 				response = append(response, byte(0)) // 不投票
 			}
+
+			response = append(response, common.Uint32ToBytes(common.CurrentTerm)...)
 			_, err := c.Write(response)
 			if err != nil {
 				log.Fatal(err)
@@ -278,11 +362,23 @@ func handleConnection(c net.Conn) {
 			if !success {
 				return
 			}
+
+			termBuf, success := read(4)
+			if !success {
+				return
+			}
+			term := binary.LittleEndian.Uint32(termBuf)
+
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
 				if common.Votes > uint32(common.Quorum) {
 					common.VoteSuccessCh <- true
+				}
+			} else {
+				if term > common.CurrentTerm {
+					common.CurrentTerm = term
+					common.VoteSuccessCh <- false
 				}
 			}
 		}

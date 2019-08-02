@@ -238,6 +238,9 @@ func handleConnection(c net.Conn) {
 			}
 			leaderCommittedIndex := binary.LittleEndian.Uint32(leaderCommittedIndexBuf)
 
+			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d\n",
+				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex)
+
 			appendEntriesLengthBuf, success := read(4)
 			if !success {
 				return

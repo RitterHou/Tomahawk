@@ -89,7 +89,7 @@ func handleConnection(c net.Conn) {
 		_, err := c.Read(data)
 		if err != nil {
 			if err == io.EOF {
-				if tog.LEVEL >= tog.WARN {
+				if tog.LogLevel(tog.WARN) {
 					log.Println("connection closed by remote:", c.RemoteAddr())
 				}
 				node.RemoveNodeById(remoteNodeId)

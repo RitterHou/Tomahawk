@@ -17,6 +17,7 @@ var (
 	buildStamp = ""
 	version    = ""
 	goVersion  = ""
+	logLevel   = ""
 )
 
 func init() {
@@ -32,15 +33,15 @@ func init() {
 	common.Version = version
 	common.GoVersion = goVersion
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
-	log.SetOutput(os.Stdout)
-
 	flag.UintVar(&common.Port, "port", 6300, "Bind port")
 	flag.UintVar(&common.HTTPPort, "http", 6200, "HTTP server bind port")
 	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id")
 	flag.Var(&common.Hosts, "hosts", "Seed hosts")
 	flag.UintVar(&common.Quorum, "quorum", 1, "At we know, most of the nodes")
+	flag.StringVar(&logLevel, "level", "debug", "Log level")
 	flag.Parse()
+
+	tog.Init(logLevel)
 }
 
 func main() {

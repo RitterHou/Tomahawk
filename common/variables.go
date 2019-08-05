@@ -74,8 +74,8 @@ var VoteFor = make(map[uint32]string)
 
 // 一条数据
 type Entry struct {
-	Key   string
-	Value string
+	Key   string `json:"key"`
+	Value string `json:"value"`
 	Term  uint32 // 添加该条数据时的任期号
 	Index uint32 // 在log中的索引
 }
@@ -83,28 +83,6 @@ type Entry struct {
 // 已经提交的entry索引
 var CommittedIndex = uint32(0)
 var AppliedIndex = uint32(0)
-
-// 所有的数据
-var entries = make([]Entry, 0)
-
-// 添加一条数据
-func AppendEntry(key, value string) {
-	entries = append(entries, Entry{Key: key, Value: value, Term: CurrentTerm, Index: uint32(len(entries))})
-}
-
-// 根据key获取entry
-func GetEntryByKey(key string) string {
-	for i := len(entries); i > 0; i-- {
-		if entries[i].Key == key {
-			return entries[i].Value
-		}
-	}
-	return ""
-}
-
-func GetLastEntry() Entry {
-	return entries[len(entries)-1]
-}
 
 // 作为leader
 var (
@@ -115,13 +93,4 @@ var (
 var (
 	PrevLogIndex uint32 // 剔除entries最新的log的index
 	PrevLogTerm  uint32 // 剔除entries最新的log的term
-)
-
-// AppendEntries
-var (
-	leaderTerm uint32
-	leaderId   string
-
-	entries0          []Entry // 发送的entries，可以为空（心跳）
-	leaderCommitIndex uint32  // leader的commitIndex
 )

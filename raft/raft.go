@@ -8,38 +8,6 @@ import (
 	"time"
 )
 
-// 给所有的节点发送数据
-func sendDataToFollowers(nodes []node.Node, data []byte) {
-	for _, n := range nodes {
-		if n.Conn != nil {
-			_, err := n.Conn.Write(data)
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}
-}
-
-// 发送entries信息给follower，如果entries为空则为心跳
-func sendAppendEntries(entries []common.Entry) {
-	entriesLength := 0 // entries的长度，默认为零
-	if entries != nil {
-		entriesLength = len(entries)
-	}
-	data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
-	data = append(data, common.Uint32ToBytes(common.PrevLogIndex)...)
-	data = append(data, common.Uint32ToBytes(common.PrevLogTerm)...)
-	data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
-	data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
-
-	for i := 0; i < entriesLength; i++ {
-		// TODO 对Entry进行编码，目前因为只考虑心跳，长度皆为零所以暂时不需要
-	}
-
-	nodes := node.GetNodes()
-	sendDataToFollowers(nodes, data)
-}
-
 // 执行Raft协议
 func Run() {
 	for {
@@ -71,7 +39,7 @@ func Run() {
 				lastEntry := common.GetLastEntry()
 				data = append(data, common.Uint32ToBytes(lastEntry.Index)...) // Index
 				data = append(data, common.Uint32ToBytes(lastEntry.Term)...)  // Term
-				sendDataToFollowers(nodes, data)
+				node.SendDataToFollowers(nodes, data)
 			}
 
 			electionTimeout := common.RandomInt(common.ElectionTimeoutMin, common.ElectionTimeoutMax)
@@ -86,7 +54,7 @@ func Run() {
 
 					// 选举成功立即发送心跳，防止follower再次超时
 					common.LeaderSendEntryCh <- true
-					sendAppendEntries(nil)
+					node.SendAppendEntries(nil)
 				} else {
 					common.Role = common.Follower
 					if tog.LogLevel(tog.DEBUG) {
@@ -110,7 +78,7 @@ func Run() {
 					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
-				sendAppendEntries(nil)
+				node.SendAppendEntries(nil)
 			}
 		}
 	}

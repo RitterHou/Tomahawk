@@ -12,44 +12,6 @@ import (
 	"sort"
 )
 
-// 客户端发送的数据
-type entry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-// 给所有的节点发送数据
-func sendDataToFollowers(nodes []node.Node, data []byte) {
-	for _, n := range nodes {
-		if n.Conn != nil {
-			_, err := n.Conn.Write(data)
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}
-}
-
-// 发送entries信息给follower，如果entries为空则为心跳
-func sendAppendEntries(entries []common.Entry) {
-	entriesLength := 0 // entries的长度，默认为零
-	if entries != nil {
-		entriesLength = len(entries)
-	}
-	data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
-	data = append(data, common.Uint32ToBytes(common.PrevLogIndex)...)
-	data = append(data, common.Uint32ToBytes(common.PrevLogTerm)...)
-	data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
-	data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
-
-	for i := 0; i < entriesLength; i++ {
-		// TODO 对Entry进行编码，目前因为只考虑心跳，长度皆为零所以暂时不需要
-	}
-
-	nodes := node.GetNodes()
-	sendDataToFollowers(nodes, data)
-}
-
 // 启动HTTP服务器
 func StartHttpServer(port uint) {
 	// 显示服务器信息
@@ -123,6 +85,7 @@ func StartHttpServer(port uint) {
 		case http.MethodPost:
 			// 仅可以向leader写数据
 			if common.LocalNodeId != common.LeaderNodeId {
+				// TODO 可以由follower直接转发HTTP请求到leader
 				leaderHttp := ""
 				for _, n := range node.GetNodes() {
 					if n.NodeId == common.LeaderNodeId {
@@ -148,32 +111,31 @@ func StartHttpServer(port uint) {
 			}
 			body := string(bodyBuf)
 
-			var eArray []entry
-			err = json.Unmarshal(bodyBuf, &eArray) // 优先解析JSON数组
+			var entries []common.Entry
+			err = json.Unmarshal(bodyBuf, &entries) // 优先解析JSON数组
 			if err != nil {
-				var e entry
-				err := json.Unmarshal(bodyBuf, &e) // 如果数组解析失败，则解析JSON对象
+				var entry common.Entry
+				err := json.Unmarshal(bodyBuf, &entry) // 如果数组解析失败，则解析JSON对象
 				if err != nil {
 					//http.Error(w, err.Error(), 400)
 					http.Error(w, "Post body can't be decode to json: "+body, 400)
 					return
 				}
-				eArray = make([]entry, 1)
-				eArray[0] = e
+				entries = make([]common.Entry, 1)
+				entries[0] = entry
 			}
 
-			var entries = make([]common.Entry, 0)
-			for _, e := range eArray {
+			for _, e := range entries {
 				_, err = fmt.Fprintf(w, "Post Success: {\"%s\": \"%s\"}\n", e.Key, e.Value)
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
 
-			//common.AppendEntry(key, value)
+			entries = common.AppendEntryList(entries)
 
 			common.LeaderSendEntryCh <- true // leader向follower发送数据，此周期内不再需要主动发送心跳
-			sendAppendEntries(entries)
+			node.SendAppendEntries(entries)
 		default:
 			_, err := fmt.Fprintln(w, "Only allow method [GET, POST].")
 			if err != nil {

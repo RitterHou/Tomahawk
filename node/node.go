@@ -112,3 +112,35 @@ func UpdateLocalIp(conn net.Conn) {
 
 	}
 }
+
+// 给所有的节点发送数据
+func SendDataToFollowers(nodes []Node, data []byte) {
+	for _, n := range nodes {
+		if n.Conn != nil {
+			_, err := n.Conn.Write(data)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+}
+
+// 发送entries信息给follower，如果entries为空则为心跳
+func SendAppendEntries(entries []common.Entry) {
+	entriesLength := 0 // entries的长度，默认为零
+	if entries != nil {
+		entriesLength = len(entries)
+	}
+	data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
+	data = append(data, common.Uint32ToBytes(common.PrevLogIndex)...)
+	data = append(data, common.Uint32ToBytes(common.PrevLogTerm)...)
+	data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
+	data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
+
+	for i := 0; i < entriesLength; i++ {
+		data = append(data, common.EncodeEntry(entries[i])...)
+	}
+
+	nodes := GetNodes()
+	SendDataToFollowers(nodes, data)
+}

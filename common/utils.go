@@ -4,14 +4,17 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 )
 
+// 生成一个在指定范围内的随机整数
 func RandomInt(min, max int) int {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min) + min
 }
 
+// 生成一个指定长度的随机字符串
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -95,4 +98,48 @@ func GetLocalIp() string {
 		}
 	}
 	return ""
+}
+
+// 所有的数据
+var entries = make([]Entry, 0)
+var entryMutex sync.Mutex
+
+func AppendEntryList(entryList []Entry) []Entry {
+	entryMutex.Lock()
+	for i := 0; i < len(entryList); i++ {
+		entryList[i].Term = CurrentTerm
+		entryList[i].Index = uint32(len(entries))
+	}
+	entries = append(entries, entryList...)
+	entryMutex.Unlock()
+	return entryList
+}
+
+// 根据key获取entry
+func GetEntryByKey(key string) string {
+	defer entryMutex.Unlock()
+	entryMutex.Lock()
+	for i := len(entries); i > 0; i-- {
+		if entries[i].Key == key {
+			return entries[i].Value
+		}
+	}
+	return ""
+}
+
+func GetEntries() []Entry {
+	return entries
+}
+
+func GetLastEntry() Entry {
+	return entries[len(entries)-1]
+}
+
+func EncodeEntry(entry Entry) []byte {
+	data := make([]byte, 0)
+	data = append(data, AddBufHead([]byte(entry.Key))...)
+	data = append(data, AddBufHead([]byte(entry.Value))...)
+	data = append(data, Uint32ToBytes(entry.Term)...)
+	data = append(data, Uint32ToBytes(entry.Index)...)
+	return data
 }

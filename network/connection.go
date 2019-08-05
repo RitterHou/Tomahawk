@@ -246,15 +246,44 @@ func handleConnection(c net.Conn) {
 				return
 			}
 			appendEntriesLength := binary.LittleEndian.Uint32(appendEntriesLengthBuf)
+			// 遍历所有的entry
 			for i := uint32(0); i < appendEntriesLength; i++ {
-				// TODO 对Entry进行解码，目前因为只考虑心跳，长度皆为零所以暂时不需要
+				keyBuf, success := readBuf()
+				if !success {
+					return
+				}
+				key := string(keyBuf)
+
+				valueBuf, success := readBuf()
+				if !success {
+					return
+				}
+				value := string(valueBuf)
+
+				termBuf, success := read(4)
+				if !success {
+					return
+				}
+				term := binary.LittleEndian.Uint32(termBuf)
+
+				indexBuf, success := read(4)
+				if !success {
+					return
+				}
+				index := binary.LittleEndian.Uint32(indexBuf)
+
+				log.Printf("AppendEntries from leader, key: %s, value: %s, term: %d, index: %d\n",
+					key, value, term, index)
 			}
 
+			appendSuccess := true
 			if leaderTerm < common.CurrentTerm {
-				if tog.LogLevel(tog.WARN) {
-					log.Printf("Remote %s(%d) < local %s(%d) but sent entries\n",
-						remoteNodeId, leaderTerm, common.LocalNodeId, common.CurrentTerm)
-				}
+				appendSuccess = false
+			}
+
+			entries := common.GetEntries()
+			if entry := entries[leaderPrevLogIndex]; entry.Term != leaderPrevLogTerm {
+				appendSuccess = false
 			}
 
 			switch common.Role {
@@ -279,7 +308,7 @@ func handleConnection(c net.Conn) {
 
 			// AppendEntries的响应
 			var response = []byte{common.AppendEntriesResponse}
-			if true {
+			if appendSuccess {
 				response = append(response, byte(1))
 			} else {
 				response = append(response, byte(0))

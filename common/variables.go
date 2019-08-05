@@ -86,8 +86,10 @@ var AppliedIndex = uint32(0)
 
 // 作为leader
 var (
-	nextIndexMap  = make(map[string]uint32) // 需要发送给指定follower的下一个log entry下标
-	matchIndexMap = make(map[string]uint32) // 针对指定follower，已经复制的最大的log entry下标
+	// 需要发送给指定follower的下一个log entry下标
+	nextIndexMap = make(map[string]uint32)
+	// 针对指定follower，已经复制的最大的log entry下标，leader与follower相匹配的最后一个log的下标
+	matchIndexMap = make(map[string]uint32)
 )
 
 var (

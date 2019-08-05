@@ -288,22 +288,29 @@ func handleConnection(c net.Conn) {
 
 			switch common.Role {
 			case common.Leader:
-				if tog.LogLevel(tog.WARN) {
-					log.Printf("local %s(%d) is leader but remote %s(%d) sent entries\n",
-						common.LocalNodeId, common.CurrentTerm, remoteNodeId, leaderTerm)
+				if leaderTerm > common.CurrentTerm {
+					common.Role = common.Follower
 				}
 			case common.Candidate:
-				// 虽然我是候选人，但是别人的任期比我高，我选举失败重新变成follower
 				if leaderTerm >= common.CurrentTerm {
 					common.VoteSuccessCh <- false
 					common.CurrentTerm = leaderTerm
 					common.LeaderNodeId = remoteNodeId // 设置leader节点
+				} else {
+					// 当前term要更高，继续进行选举
+					appendSuccess = false
 				}
 			case common.Follower:
 				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
 				common.CurrentTerm = leaderTerm
 				common.LeaderNodeId = remoteNodeId // 设置leader节点
+			}
+
+			// 根据leader的committedIndex更新当前节点的appliedIndex
+			if leaderCommittedIndex > common.AppliedIndex {
+				common.CommittedIndex = leaderCommittedIndex
+				common.AppliedIndex = leaderCommittedIndex
 			}
 
 			// AppendEntries的响应

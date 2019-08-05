@@ -116,12 +116,15 @@ func UpdateLocalIp(conn net.Conn) {
 // 给所有的节点发送数据
 func SendDataToFollowers(nodes []Node, data []byte) {
 	for _, n := range nodes {
-		if n.Conn != nil {
-			_, err := n.Conn.Write(data)
-			if err != nil {
-				log.Println(err)
+		// 并行的发送数据到follower，提升发送效率
+		go func() {
+			if n.Conn != nil {
+				_, err := n.Conn.Write(data)
+				if err != nil {
+					log.Println(err)
+				}
 			}
-		}
+		}()
 	}
 }
 

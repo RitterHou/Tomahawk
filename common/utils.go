@@ -101,16 +101,16 @@ func GetLocalIp() string {
 }
 
 // 所有的数据
-var entries = make([]Entry, 0)
+var logEntries = make([]Entry, 0)
 var entryMutex sync.Mutex
 
 func AppendEntryList(entryList []Entry) []Entry {
 	entryMutex.Lock()
 	for i := 0; i < len(entryList); i++ {
 		entryList[i].Term = CurrentTerm
-		entryList[i].Index = uint32(len(entries))
+		entryList[i].Index = uint32(len(logEntries))
 	}
-	entries = append(entries, entryList...)
+	logEntries = append(logEntries, entryList...)
 	entryMutex.Unlock()
 	return entryList
 }
@@ -119,20 +119,20 @@ func AppendEntryList(entryList []Entry) []Entry {
 func GetEntryByKey(key string) string {
 	defer entryMutex.Unlock()
 	entryMutex.Lock()
-	for i := len(entries); i > 0; i-- {
-		if entries[i].Key == key {
-			return entries[i].Value
+	for i := len(logEntries); i > 0; i-- {
+		if logEntries[i].Key == key {
+			return logEntries[i].Value
 		}
 	}
 	return ""
 }
 
 func GetEntries() []Entry {
-	return entries
+	return logEntries
 }
 
 func GetLastEntry() Entry {
-	return entries[len(entries)-1]
+	return logEntries[len(logEntries)-1]
 }
 
 func EncodeEntry(entry Entry) []byte {

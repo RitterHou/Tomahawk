@@ -77,11 +77,13 @@ func GetNodes() TheNodeList {
 }
 
 type Node struct {
-	NodeId   string
-	Conn     net.Conn
-	Ip       string
-	TCPPort  uint32
-	HTTPPort uint32
+	NodeId     string   // 节点的唯一ID
+	Conn       net.Conn // 当前节点与该节点的TCP连接，如果是当前节点，则为nil
+	Ip         string   // 节点的IP地址
+	TCPPort    uint32   // 节点所监听的TCP端口
+	HTTPPort   uint32   // 节点所监听的HTTP服务端口
+	nextIndex  uint32   // 如果当前节点是leader，记录了发送给该节点的下一个log entry下标
+	matchIndex uint32   // 如果当前节点是leader，记录了该节点已经复制的最大的log entry下标，即leader与follower相匹配的最后一个log的下标
 }
 
 func (node Node) String() string {

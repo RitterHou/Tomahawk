@@ -84,14 +84,6 @@ type Entry struct {
 var CommittedIndex = uint32(0)
 var AppliedIndex = uint32(0)
 
-// 作为leader
-var (
-	// 需要发送给指定follower的下一个log entry下标
-	nextIndexMap = make(map[string]uint32)
-	// 针对指定follower，已经复制的最大的log entry下标，leader与follower相匹配的最后一个log的下标
-	matchIndexMap = make(map[string]uint32)
-)
-
 var (
 	PrevLogIndex uint32 // 剔除entries最新的log的index
 	PrevLogTerm  uint32 // 剔除entries最新的log的term

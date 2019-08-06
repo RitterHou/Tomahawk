@@ -346,6 +346,10 @@ func handleConnection(c net.Conn) {
 				log.Printf("AppendEntriesResponse, term: %d, success: %t\n", term, resSuccess)
 			}
 		case common.VoteRequest:
+			if common.Role == common.Follower {
+				// 重置超时定时器
+				common.HeartbeatTimeoutCh <- true
+			}
 			candidateTermBuf, success := read(4)
 			if !success {
 				return

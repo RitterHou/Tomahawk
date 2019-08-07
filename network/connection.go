@@ -190,7 +190,9 @@ func handleConnection(c net.Conn) {
 					}
 				}
 			}
-		case common.ShareNodes: // TODO 节点同步只存在一轮，可能存在节点丢失的情况
+		case common.ShareNodes:
+			// 为什么不需要使用Gossip这样的算法呢，因为raft这样的系统一般不会直接存储海量的数据，而是存储一些meta
+			// 数据、或者作为另一个集群的master来使用，所以节点数量不会太多，因此不需要Gossip这样的节点间数据同步协议
 			nodeIdBuf, success := readBuf()
 			if !success {
 				return
@@ -218,33 +220,55 @@ func handleConnection(c net.Conn) {
 			if !success {
 				return
 			}
+			// leader的任期
 			leaderTerm := binary.LittleEndian.Uint32(leaderTermBuf)
 
 			leaderPrevLogIndexBuf, success := read(4)
 			if !success {
 				return
 			}
+			// leader所记录的当前follower的最后一个log索引
 			leaderPrevLogIndex := binary.LittleEndian.Uint32(leaderPrevLogIndexBuf)
 
 			leaderPrevLogTermBuf, success := read(4)
 			if !success {
 				return
 			}
+			// leader所记录的当前follower的最后一个log索引的任期
 			leaderPrevLogTerm := binary.LittleEndian.Uint32(leaderPrevLogTermBuf)
 
 			leaderCommittedIndexBuf, success := read(4)
 			if !success {
 				return
 			}
+			// leader的commitIndex
 			leaderCommittedIndex := binary.LittleEndian.Uint32(leaderCommittedIndexBuf)
 
 			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d\n",
 				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex)
 
+			// leader的此次append是否成功
+			appendSuccess := true
+			if leaderTerm < common.CurrentTerm {
+				appendSuccess = false
+			}
+
+			entries := common.GetEntries()
+			if uint32(len(entries)) > leaderPrevLogIndex {
+				// leader记录的当前节点最后一个log的term和本地的不一致，appendEntries失败
+				if entry := entries[leaderPrevLogIndex]; entry.Term != leaderPrevLogTerm {
+					appendSuccess = false
+				}
+			} else {
+				// 如果leader记录的当前节点index超出限制，也是一种不匹配
+				appendSuccess = false
+			}
+
 			appendEntriesLengthBuf, success := read(4)
 			if !success {
 				return
 			}
+			// 此次AppendEntries的entries长度
 			appendEntriesLength := binary.LittleEndian.Uint32(appendEntriesLengthBuf)
 			// 遍历所有的entry
 			for i := uint32(0); i < appendEntriesLength; i++ {
@@ -264,26 +288,34 @@ func handleConnection(c net.Conn) {
 				if !success {
 					return
 				}
+				// 该Entry所对应的任期
 				term := binary.LittleEndian.Uint32(termBuf)
 
 				indexBuf, success := read(4)
 				if !success {
 					return
 				}
+				// 该Entry在log中的位置
 				index := binary.LittleEndian.Uint32(indexBuf)
 
 				log.Printf("AppendEntries from leader, key: %s, value: %s, term: %d, index: %d\n",
 					key, value, term, index)
+
+				// 如果可以把entry append到当前节点中
+				if appendSuccess {
+					entries = common.GetEntries() // 获取当前节点的当前entries
+					// 一旦产生冲突，从当前节点开始进行cutOff
+					if uint32(len(entries)) > index && entries[index].Term != term {
+						common.CutoffEntries(index)
+					}
+					// 把entry保存到follower中去
+					common.SetEntryByIndex(index, common.Entry{Key: key, Value: value, Index: index, Term: term})
+				}
 			}
 
-			appendSuccess := true
-			if leaderTerm < common.CurrentTerm {
-				appendSuccess = false
-			}
-
-			entries := common.GetEntries()
-			if entry := entries[leaderPrevLogIndex]; entry.Term != leaderPrevLogTerm {
-				appendSuccess = false
+			// 根据leader的committedIndex更新当前节点的committedIndex
+			if leaderCommittedIndex > common.CommittedIndex {
+				common.CommittedIndex = common.Min(leaderCommittedIndex, uint32(len(common.GetEntries())))
 			}
 
 			switch common.Role {
@@ -293,24 +325,16 @@ func handleConnection(c net.Conn) {
 				}
 			case common.Candidate:
 				if leaderTerm >= common.CurrentTerm {
+					common.Role = common.Follower
 					common.VoteSuccessCh <- false
-					common.CurrentTerm = leaderTerm
-					common.LeaderNodeId = remoteNodeId // 设置leader节点
-				} else {
-					// 当前term要更高，继续进行选举
-					appendSuccess = false
 				}
 			case common.Follower:
-				// 重置超时定时器
-				common.HeartbeatTimeoutCh <- true
-				common.CurrentTerm = leaderTerm
-				common.LeaderNodeId = remoteNodeId // 设置leader节点
-			}
-
-			// 根据leader的committedIndex更新当前节点的appliedIndex
-			if leaderCommittedIndex > common.AppliedIndex {
-				common.CommittedIndex = leaderCommittedIndex
-				common.AppliedIndex = leaderCommittedIndex
+				if appendSuccess {
+					// 重置超时定时器
+					common.HeartbeatTimeoutCh <- true
+					common.CurrentTerm = leaderTerm
+					common.LeaderNodeId = remoteNodeId // 设置leader节点
+				}
 			}
 
 			// AppendEntries的响应
@@ -345,6 +369,9 @@ func handleConnection(c net.Conn) {
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("AppendEntriesResponse, term: %d, success: %t\n", term, resSuccess)
 			}
+
+			n := node.GetNode(remoteNodeId)
+			n.AppendSuccess <- resSuccess // 获取follower的返回结果并通过channel进行同步
 		case common.VoteRequest:
 			if common.Role == common.Follower {
 				// 重置超时定时器
@@ -415,7 +442,7 @@ func handleConnection(c net.Conn) {
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
-				if common.Votes > uint32(common.Quorum) {
+				if common.Votes > common.Quorum {
 					common.VoteSuccessCh <- true
 				}
 			} else {

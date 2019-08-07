@@ -18,6 +18,7 @@ var (
 	version    = ""
 	goVersion  = ""
 	logLevel   = ""
+	quorum     uint
 )
 
 func init() {
@@ -37,10 +38,11 @@ func init() {
 	flag.UintVar(&common.HTTPPort, "http", 6200, "HTTP server bind port")
 	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id")
 	flag.Var(&common.Hosts, "hosts", "Seed hosts")
-	flag.UintVar(&common.Quorum, "quorum", 1, "As we know, most of the nodes")
+	flag.UintVar(&quorum, "quorum", 1, "As we know, most of the nodes")
 	flag.StringVar(&logLevel, "level", "debug", "Log level")
 	flag.Parse()
 
+	common.Quorum = uint32(quorum) // flag不支持uint32类型
 	tog.Init(logLevel)
 }
 

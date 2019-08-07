@@ -24,7 +24,7 @@ var (
 	Port        uint      // 监听的端口
 	HTTPPort    uint      // HTTP服务监听的端口
 	Hosts       arrayFlag // 种子节点
-	Quorum      uint      // 所谓的“大多数”
+	Quorum      uint32    // 所谓的“大多数”
 )
 
 // 网络传输的数据类型
@@ -48,17 +48,19 @@ const (
 
 // 选举相关的一些数据
 var (
-	HeartbeatTimeoutCh = make(chan bool, 1) // 当前节点心跳超时的channel
-	VoteSuccessCh      = make(chan bool, 1) // 选举情况channel
-	LeaderSendEntryCh  = make(chan bool, 1) // leader发送了信息的channel
+	HeartbeatTimeoutCh  = make(chan bool, 1) // 当前节点心跳超时的channel，用于刷新心跳超时时间
+	VoteSuccessCh       = make(chan bool, 1) // 选举情况channel，表示选举成功还是失败、或者超时
+	LeaderSendEntryCh   = make(chan bool, 1) // leader发送了信息的channel，意味着在这个周期内不再需要主动发送心跳
+	LeaderAppendSuccess = make(chan bool, 1) // leader复制entries给大部分的follower操作成功
 )
 
 const (
-	HeartbeatTimeoutMin = 150
-	HeartbeatTimeoutMax = 300
-	ElectionTimeoutMin  = 150
-	ElectionTimeoutMax  = 300
-	LeaderCycleTimeout  = 100
+	HeartbeatTimeoutMin              = 150
+	HeartbeatTimeoutMax              = 300
+	ElectionTimeoutMin               = 150
+	ElectionTimeoutMax               = 300
+	LeaderCycleTimeout               = 100
+	LeaderResendAppendEntriesTimeout = 100
 )
 
 var (
@@ -83,8 +85,3 @@ type Entry struct {
 // 已经提交的entry索引
 var CommittedIndex = uint32(0)
 var AppliedIndex = uint32(0)
-
-var (
-	PrevLogIndex uint32 // 剔除entries最新的log的index
-	PrevLogTerm  uint32 // 剔除entries最新的log的term
-)

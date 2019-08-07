@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"log"
 	"math/rand"
 	"net"
 	"sync"
@@ -104,27 +105,60 @@ func GetLocalIp() string {
 var logEntries = make([]Entry, 0)
 var entryMutex sync.Mutex
 
+// 只有leader可以这样顺序的append entry数据
 func AppendEntryList(entryList []Entry) []Entry {
+	if Role != Leader {
+		return nil
+	}
 	entryMutex.Lock()
 	for i := 0; i < len(entryList); i++ {
 		entryList[i].Term = CurrentTerm
-		entryList[i].Index = uint32(len(logEntries))
+		entryList[i].Index = uint32(len(logEntries)) // Index自增
 	}
 	logEntries = append(logEntries, entryList...)
 	entryMutex.Unlock()
-	return entryList
+	return entryList // 被append的数据
 }
 
-// 根据key获取entry
-func GetEntryByKey(key string) string {
-	defer entryMutex.Unlock()
-	entryMutex.Lock()
-	for i := len(logEntries); i > 0; i-- {
-		if logEntries[i].Key == key {
-			return logEntries[i].Value
-		}
+//// 根据key获取entry
+//func GetEntryByKey(key string) string {
+//	defer entryMutex.Unlock()
+//	entryMutex.Lock()
+//	for i := len(logEntries); i > 0; i-- {
+//		if logEntries[i].Key == key {
+//			return logEntries[i].Value
+//		}
+//	}
+//	return ""
+//}
+
+// 根据索引获取Entry
+func GetEntryByIndex(index uint32) Entry {
+	return logEntries[index]
+}
+
+// 获取当前Entries的长度
+func GetEntriesLength() uint32 {
+	return uint32(len(logEntries))
+}
+
+// 根据索引设置Entry
+func SetEntryByIndex(index uint32, entry Entry) {
+	if GetEntriesLength() <= index {
+		newLogEntries := make([]Entry, 0, index*2) // 两倍扩容
+		copy(newLogEntries, logEntries)
+		logEntries = newLogEntries
 	}
-	return ""
+	logEntries[index] = entry
+}
+
+// 如果产生冲突，从当前节点进行裁剪
+func CutoffEntries(index uint32) {
+	if Role != Follower {
+		log.Println("只有follower才会被裁掉entries")
+		return
+	}
+	logEntries = logEntries[:index]
 }
 
 func GetEntries() []Entry {
@@ -135,6 +169,7 @@ func GetLastEntry() Entry {
 	return logEntries[len(logEntries)-1]
 }
 
+// 把entry编码为字节数组
 func EncodeEntry(entry Entry) []byte {
 	data := make([]byte, 0)
 	data = append(data, AddBufHead([]byte(entry.Key))...)
@@ -142,4 +177,18 @@ func EncodeEntry(entry Entry) []byte {
 	data = append(data, Uint32ToBytes(entry.Term)...)
 	data = append(data, Uint32ToBytes(entry.Index)...)
 	return data
+}
+
+func Min(m, n uint32) uint32 {
+	if m < n {
+		return m
+	}
+	return n
+}
+
+func Max(m, n uint32) uint32 {
+	if m < n {
+		return n
+	}
+	return m
 }

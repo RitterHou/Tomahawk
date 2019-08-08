@@ -58,7 +58,7 @@ func Run() {
 
 					// 当一个领导人刚获得权力的时候，他初始化所有的nextIndex值为自己的最后一条日志的index加1
 					for _, n := range node.GetNodes() {
-						nextIndex := common.GetEntriesLength() + 1
+						nextIndex := common.GetEntriesLength()
 						node.UpdateNextIndexByNodeId(n.NodeId, nextIndex)
 					}
 

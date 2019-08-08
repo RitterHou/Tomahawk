@@ -24,13 +24,16 @@ func AddNode(node Node) {
 		log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
 	}
 	mutex.Lock()
+	if node.AppendSuccess == nil { // 初始化
+		node.AppendSuccess = make(chan bool, 1)
+	}
 	nodes[node.NodeId] = node
 	mutex.Unlock()
 }
 
 func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("Update %s.NextIndex: %d\n", nodeId, nextIndex)
+		log.Printf("Update %s.nextIndex: %d\n", nodeId, nextIndex)
 	}
 	n := nodes[nodeId]
 	n.NextIndex = nextIndex
@@ -111,19 +114,12 @@ func UpdateLocalIp(conn net.Conn) {
 	if !ipUpdated {
 		ip := strings.Split(conn.LocalAddr().String(), ":")[0]
 		ipUpdated = true
-
-		nodes := GetNodes()
-		for _, n := range nodes {
-			if n.NodeId == common.LocalNodeId {
-				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("Update local Ip from %s to %s\n", n.Ip, ip)
-				}
-				n.Ip = ip
-				AddNode(n)
-				break
-			}
+		n := nodes[common.LocalNodeId]
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("Update local IP from %s to %s\n", n.Ip, ip)
 		}
-
+		n.Ip = ip
+		nodes[common.LocalNodeId] = n
 	}
 }
 
@@ -148,9 +144,14 @@ func SendAppendEntries(entries []common.Entry) {
 
 	for _, n := range GetNodes() {
 		if n.Conn == nil {
+			if tog.LogLevel(tog.DEBUG) {
+				//log.Printf("%s's conn is nil\n", n.NodeId)
+			}
 			continue
 		}
-		go func() {
+		// 这里的变量不能使用闭包，否则会有问题
+		go func(n Node) {
+		SendData:
 			entriesLength := 0 // entries的长度，默认为零
 			if entries != nil {
 				entriesLength = len(entries)
@@ -168,20 +169,22 @@ func SendAppendEntries(entries []common.Entry) {
 				data = append(data, common.EncodeEntry(entries[i])...)
 				commitIndex = common.Max(commitIndex, entries[i].Index) // 获取到最大的Index
 			}
-
-			if n.AppendSuccess == nil { // 初始化
-				n.AppendSuccess = make(chan bool, 1)
-			}
-
-		Append:
+		Timeout:
 			// 发送appendEntries给follower
 			_, err := n.Conn.Write(data)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("%s(me) send AppendEntries to %s\n", common.LocalNodeId, n.NodeId)
+			}
 			select {
 			case appendSuccess := <-n.AppendSuccess:
+				if tog.LogLevel(tog.DEBUG) {
+					log.Printf("%s(me) get AppendEntries Reponse: %v\n", common.LocalNodeId, appendSuccess)
+				}
 				if appendSuccess {
 					atomic.AddUint32(&replicatedNum, 1)
 					if replicatedNum == common.Quorum { // 只触发一次
@@ -190,12 +193,17 @@ func SendAppendEntries(entries []common.Entry) {
 					}
 				} else {
 					// 发送失败，减小nextIndex进行重试
-					goto Append
+					n.NextIndex = n.NextIndex - 1 // 局部变量，只能在当前环境使用，需要进一步同步
+					UpdateNextIndexByNodeId(n.NodeId, n.NextIndex)
+					goto SendData
 				}
 			case <-time.After(time.Duration(common.LeaderResendAppendEntriesTimeout) * time.Millisecond):
 				// 超时重试
-				goto Append
+				if tog.LogLevel(tog.DEBUG) {
+					log.Printf("%s(me) to %s AppendEntries timeout and retry\n", common.LocalNodeId, n.NodeId)
+				}
+				goto Timeout
 			}
-		}()
+		}(n)
 	}
 }

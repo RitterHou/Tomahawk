@@ -167,6 +167,11 @@ func handleConnection(c net.Conn) {
 				log.Println("Connected to remote node:", remoteNode)
 			}
 
+			// 如果是新连接的节点并且当前节点是leader，则需要设置远程节点的nextIndex
+			if common.Role == common.Leader {
+				node.UpdateNextIndexByNodeId(remoteNodeId, common.GetEntriesLength())
+			}
+
 			if addr, ok := c.LocalAddr().(*net.TCPAddr); ok {
 				if uint(addr.Port) != common.Port {
 					continue // 不是服务器就不进行广播
@@ -216,6 +221,9 @@ func handleConnection(c net.Conn) {
 				Connect(fmt.Sprintf("%s:%d", remoteIp, remotePort))
 			}
 		case common.AppendEntries:
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("%s(me) Get AppendEntries from %s\n", common.LocalNodeId, remoteNodeId)
+			}
 			leaderTermBuf, success := read(4)
 			if !success {
 				return
@@ -243,9 +251,6 @@ func handleConnection(c net.Conn) {
 			}
 			// leader的commitIndex
 			leaderCommittedIndex := binary.LittleEndian.Uint32(leaderCommittedIndexBuf)
-
-			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d\n",
-				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex)
 
 			// leader的此次append是否成功
 			appendSuccess := true
@@ -350,6 +355,9 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d, entriesLength: %d, result: %v, resultTerm: %d\n",
+				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex, len(entries), appendSuccess, common.CurrentTerm)
 		case common.AppendEntriesResponse:
 			resSuccessBuf, success := read(1)
 			if !success {

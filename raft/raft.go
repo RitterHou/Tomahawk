@@ -54,7 +54,7 @@ func Run() {
 
 					// 刚刚当选的时候添加一条 no operation 的日志记录
 					noOp := common.Entry{Key: "", Value: ""}
-					entries := common.AppendEntryList([]common.Entry{noOp})
+					common.AppendEntryList([]common.Entry{noOp})
 
 					// 当一个领导人刚获得权力的时候，他初始化所有的nextIndex值为自己的最后一条日志的index加1
 					for _, n := range node.GetNodes() {
@@ -64,7 +64,7 @@ func Run() {
 
 					// 选举成功立即发送心跳，防止follower再次超时
 					common.LeaderSendEntryCh <- true
-					node.SendAppendEntries(entries)
+					node.SendAppendEntries()
 				} else {
 					common.Role = common.Follower
 					if tog.LogLevel(tog.DEBUG) {
@@ -88,7 +88,7 @@ func Run() {
 					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
-				node.SendAppendEntries(nil)
+				node.SendAppendEntries()
 			}
 		}
 	}

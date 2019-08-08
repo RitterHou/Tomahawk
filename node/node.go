@@ -31,7 +31,17 @@ func AddNode(node Node) {
 	mutex.Unlock()
 }
 
+func UpdateMatchIndex(nodeId string) {
+	n := nodes[nodeId]
+	n.MatchIndex = n.NextIndex
+	nodes[nodeId] = n
+}
+
 func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
+	if nodeId == common.LocalNodeId {
+		// 只更新follower
+		return
+	}
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("Update %s.nextIndex: %d\n", nodeId, nextIndex)
 	}
@@ -138,8 +148,8 @@ func SendDataToFollowers(nodes []Node, data []byte) {
 	}
 }
 
-// 发送entries信息给follower，如果entries为空则为心跳
-func SendAppendEntries(entries []common.Entry) {
+// 发送entries信息给follower
+func SendAppendEntries() {
 	replicatedNum := uint32(0) // 记录已经成功复制的follower
 
 	for _, n := range GetNodes() {
@@ -152,9 +162,10 @@ func SendAppendEntries(entries []common.Entry) {
 		// 这里的变量不能使用闭包，否则会有问题
 		go func(n Node) {
 		SendData:
-			entriesLength := 0 // entries的长度，默认为零
-			if entries != nil {
-				entriesLength = len(entries)
+			entries := common.GetEntries()[n.NextIndex-1:]
+			entriesLength := len(entries)
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("%s(me) for %s entriesLength: %d and nextIndex: %d\n", common.LocalNodeId, n.NodeId, entriesLength, n.NextIndex)
 			}
 			data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
 			// 此节点对应的最后一个index
@@ -186,11 +197,13 @@ func SendAppendEntries(entries []common.Entry) {
 					log.Printf("%s(me) get AppendEntries Reponse: %v\n", common.LocalNodeId, appendSuccess)
 				}
 				if appendSuccess {
+					UpdateMatchIndex(n.NodeId)
 					atomic.AddUint32(&replicatedNum, 1)
 					if replicatedNum == common.Quorum { // 只触发一次
 						common.LeaderAppendSuccess <- true  // client返回
 						common.CommittedIndex = commitIndex // commit
 					}
+					return
 				} else {
 					// 发送失败，减小nextIndex进行重试
 					n.NextIndex = n.NextIndex - 1 // 局部变量，只能在当前环境使用，需要进一步同步

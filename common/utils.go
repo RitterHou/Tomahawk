@@ -145,7 +145,7 @@ func GetEntriesLength() uint32 {
 // 根据索引设置Entry
 func SetEntryByIndex(index uint32, entry Entry) {
 	if GetEntriesLength() <= index {
-		newLogEntries := make([]Entry, 0, index*2) // 两倍扩容
+		newLogEntries := make([]Entry, (index+1)*2) // 两倍扩容，+1是为了防止0
 		copy(newLogEntries, logEntries)
 		logEntries = newLogEntries
 	}

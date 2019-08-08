@@ -133,12 +133,12 @@ func StartHttpServer(port uint) {
 			}
 
 			// 把entries加入到leader本地的log[]中
-			entries = common.AppendEntryList(entries)
+			common.AppendEntryList(entries)
 
 			// leader向follower发送数据，此周期内不再需要主动发送心跳
 			common.LeaderSendEntryCh <- true
 			// leader向follower发送消息
-			node.SendAppendEntries(entries)
+			node.SendAppendEntries()
 
 			<-common.LeaderAppendSuccess // 如果大部分的follower返回，则leader返回给client
 		default:

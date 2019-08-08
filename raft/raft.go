@@ -52,9 +52,19 @@ func Run() {
 					}
 					common.LeaderNodeId = common.LocalNodeId // 当前节点为leader节点
 
+					// 刚刚当选的时候添加一条 no operation 的日志记录
+					noOp := common.Entry{Key: "", Value: ""}
+					entries := common.AppendEntryList([]common.Entry{noOp})
+
+					// 当一个领导人刚获得权力的时候，他初始化所有的nextIndex值为自己的最后一条日志的index加1
+					for _, n := range node.GetNodes() {
+						nextIndex := common.GetEntriesLength() + 1
+						node.UpdateNextIndexByNodeId(n.NodeId, nextIndex)
+					}
+
 					// 选举成功立即发送心跳，防止follower再次超时
 					common.LeaderSendEntryCh <- true
-					node.SendAppendEntries(nil)
+					node.SendAppendEntries(entries)
 				} else {
 					common.Role = common.Follower
 					if tog.LogLevel(tog.DEBUG) {

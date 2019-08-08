@@ -28,6 +28,15 @@ func AddNode(node Node) {
 	mutex.Unlock()
 }
 
+func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
+	if tog.LogLevel(tog.DEBUG) {
+		log.Printf("Update %s.NextIndex: %d\n", nodeId, nextIndex)
+	}
+	n := nodes[nodeId]
+	n.NextIndex = nextIndex
+	nodes[nodeId] = n
+}
+
 func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
@@ -90,8 +99,8 @@ type Node struct {
 }
 
 func (node Node) String() string {
-	return fmt.Sprintf("{id: %s, connection: %s -> %s, ip: %s, port: %d, http: %d}",
-		node.NodeId, node.Conn.LocalAddr(), node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort)
+	return fmt.Sprintf("{id: %s, connection: %s -> %s, ip: %s, port: %d, http: %d, nextIndex: %d, matchIndex: %d}",
+		node.NodeId, node.Conn.LocalAddr(), node.Conn.RemoteAddr(), node.Ip, node.TCPPort, node.HTTPPort, node.NextIndex, node.MatchIndex)
 }
 
 // IP是否已经被更新
@@ -150,7 +159,7 @@ func SendAppendEntries(entries []common.Entry) {
 			// 此节点对应的最后一个index
 			data = append(data, common.Uint32ToBytes(n.NextIndex-1)...)
 			// 此节点对应的最后一个index的term
-			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(n.NextIndex-1).Term)...)
+			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(n.NextIndex - 1).Term)...)
 			data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
 			data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
 
@@ -172,13 +181,16 @@ func SendAppendEntries(entries []common.Entry) {
 			}
 
 			select {
-			case appendResult := <-n.AppendSuccess:
-				if appendResult {
+			case appendSuccess := <-n.AppendSuccess:
+				if appendSuccess {
 					atomic.AddUint32(&replicatedNum, 1)
 					if replicatedNum == common.Quorum { // 只触发一次
 						common.LeaderAppendSuccess <- true  // client返回
 						common.CommittedIndex = commitIndex // commit
 					}
+				} else {
+					// 发送失败，减小nextIndex进行重试
+					goto Append
 				}
 			case <-time.After(time.Duration(common.LeaderResendAppendEntriesTimeout) * time.Millisecond):
 				// 超时重试

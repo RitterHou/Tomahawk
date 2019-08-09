@@ -320,7 +320,7 @@ func handleConnection(c net.Conn) {
 
 			// 根据leader的committedIndex更新当前节点的committedIndex
 			if leaderCommittedIndex > common.CommittedIndex {
-				common.CommittedIndex = common.Min(leaderCommittedIndex, uint32(len(common.GetEntries())))
+				common.CommittedIndex = common.Min(leaderCommittedIndex, common.GetEntriesLength())
 			}
 
 			switch common.Role {

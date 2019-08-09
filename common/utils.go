@@ -113,7 +113,7 @@ func AppendEntryList(entryList []Entry) []Entry {
 	entryMutex.Lock()
 	for i := 0; i < len(entryList); i++ {
 		entryList[i].Term = CurrentTerm
-		entryList[i].Index = uint32(len(logEntries)) // Index自增
+		entryList[i].Index = GetEntriesLength() // Index自增
 	}
 	logEntries = append(logEntries, entryList...)
 	entryMutex.Unlock()

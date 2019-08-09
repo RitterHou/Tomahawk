@@ -102,7 +102,7 @@ func GetLocalIp() string {
 }
 
 // 所有的数据
-var logEntries = make([]Entry, 0)
+var logEntries = []Entry{{Key: "", Value: "", Term: 0, Index: 0}} // 初始化一条数据可以简化一些操作
 var entryMutex sync.Mutex
 
 // 只有leader可以这样顺序的append entry数据

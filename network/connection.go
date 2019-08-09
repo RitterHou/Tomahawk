@@ -264,7 +264,7 @@ func handleConnection(c net.Conn) {
 				if entry := entries[leaderPrevLogIndex]; entry.Term != leaderPrevLogTerm {
 					appendSuccess = false
 				}
-			} else if uint32(len(entries)) < leaderPrevLogIndex {
+			} else {
 				// 如果leader记录的当前节点index超出限制，也是一种不匹配
 				appendSuccess = false
 			}

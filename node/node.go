@@ -172,7 +172,7 @@ func SendAppendEntries() {
 			// 此节点对应的最后一个index
 			data = append(data, common.Uint32ToBytes(n.NextIndex-1)...)
 			// 此节点对应的最后一个index的term
-			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(n.NextIndex - 1).Term)...)
+			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(n.NextIndex-1).Term)...)
 			data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
 			data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
 

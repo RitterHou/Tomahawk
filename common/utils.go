@@ -143,13 +143,13 @@ func GetEntriesLength() uint32 {
 }
 
 // 根据索引设置Entry
-func SetEntryByIndex(index uint32, entry Entry) {
-	if GetEntriesLength() <= index {
-		newLogEntries := make([]Entry, (index+1)*2) // 两倍扩容，+1是为了防止0
-		copy(newLogEntries, logEntries)
-		logEntries = newLogEntries
+func SetEntry(entry Entry) {
+	// 理论上来说，当前节点的entries最多只能比index低一位
+	if GetEntriesLength() == entry.Index {
+		logEntries = append(logEntries, entry)
+	} else {
+		logEntries[entry.Index] = entry
 	}
-	logEntries[index] = entry
 }
 
 // 如果产生冲突，从当前节点进行裁剪

@@ -314,7 +314,7 @@ func handleConnection(c net.Conn) {
 						common.CutoffEntries(index)
 					}
 					// 把entry保存到follower中去
-					common.SetEntryByIndex(index, common.Entry{Key: key, Value: value, Index: index, Term: term})
+					common.SetEntry(common.Entry{Key: key, Value: value, Index: index, Term: term})
 				}
 			}
 

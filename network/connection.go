@@ -325,21 +325,25 @@ func handleConnection(c net.Conn) {
 
 			switch common.Role {
 			case common.Leader:
+				// 比当前term要大，当前节点恢复follower状态
 				if leaderTerm > common.CurrentTerm {
 					common.Role = common.Follower
+				} else {
+					appendSuccess = false // 拒绝这次AppendEntries
 				}
 			case common.Candidate:
+				// leader的term不小于自己的term，重新变为follower状态
 				if leaderTerm >= common.CurrentTerm {
 					common.Role = common.Follower
 					common.VoteSuccessCh <- false
+				} else {
+					appendSuccess = false // 拒绝这次AppendEntries
 				}
 			case common.Follower:
-				if appendSuccess {
-					// 重置超时定时器
-					common.HeartbeatTimeoutCh <- true
-					common.CurrentTerm = leaderTerm
-					common.LeaderNodeId = remoteNodeId // 设置leader节点
-				}
+				// 重置超时定时器
+				common.HeartbeatTimeoutCh <- true
+				common.CurrentTerm = leaderTerm
+				common.LeaderNodeId = remoteNodeId // 设置leader节点
 			}
 
 			// AppendEntries的响应
@@ -450,7 +454,7 @@ func handleConnection(c net.Conn) {
 			vote := voteBuf[0]
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
-				if common.Votes > common.Quorum {
+				if common.Votes >= common.Quorum {
 					common.VoteSuccessCh <- true
 				}
 			} else {

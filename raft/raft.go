@@ -32,7 +32,11 @@ func Run() {
 
 			nodes := node.GetNodes()
 			if len(nodes) == 1 { // 单个节点的情况
-				common.VoteSuccessCh <- true
+				if common.Votes >= common.Quorum {
+					common.VoteSuccessCh <- true
+				} else {
+					common.VoteSuccessCh <- false
+				}
 			} else {
 				// 发送选举请求
 				data := append([]byte{common.VoteRequest}, common.Uint32ToBytes(common.CurrentTerm)...)
@@ -63,7 +67,7 @@ func Run() {
 					}
 
 					// 选举成功立即发送心跳，防止follower再次超时
-					common.LeaderSendEntryCh <- true
+					// common.LeaderSendEntryCh <- true, leader在这个周期再超时一次也没有关系
 					node.SendAppendEntries()
 				} else {
 					common.Role = common.Follower

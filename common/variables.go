@@ -55,12 +55,12 @@ var (
 )
 
 const (
-	HeartbeatTimeoutMin              = 150
-	HeartbeatTimeoutMax              = 300
-	ElectionTimeoutMin               = 150
-	ElectionTimeoutMax               = 300
-	LeaderCycleTimeout               = 100
-	LeaderResendAppendEntriesTimeout = 100
+	HeartbeatTimeoutMin              = 150 // follower心跳超时阈值的下限
+	HeartbeatTimeoutMax              = 300 // follower心跳超时阈值的上限
+	ElectionTimeoutMin               = 150 // candidate选举超时阈值的下限
+	ElectionTimeoutMax               = 300 // candidate选举超时阈值的上限
+	LeaderCycleTimeout               = 60  // leader发送心跳包的周期
+	LeaderResendAppendEntriesTimeout = 60
 )
 
 var (

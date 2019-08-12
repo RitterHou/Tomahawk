@@ -49,13 +49,6 @@ func StartHttpServer(port uint) {
 			}
 			return
 		}
-		if common.LeaderNodeId == "" {
-			_, err := fmt.Fprintln(w, "Cluster is down because LeaderNodeId is \"\"")
-			if err != nil {
-				log.Fatal(err)
-			}
-			return
-		}
 		_, err := fmt.Fprintln(w, "       NodeId      Host")
 		if err != nil {
 			log.Fatal(err)
@@ -85,12 +78,35 @@ func StartHttpServer(port uint) {
 		switch r.Method {
 		case http.MethodGet:
 			key := r.URL.Query().Get("key")
+			if key == "" {
+				entries := common.GetEntries()
+				_, err := fmt.Fprintf(w, "Total entries: %d\n", len(entries))
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, entry := range entries {
+					_, err := fmt.Fprintf(w, `{"key": "%s", "value": "%s", "index": "%d", "term": "%d"}`+"\n",
+						entry.Key, entry.Value, entry.Index, entry.Term)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+				return
+			}
 			value := common.GetEntryByKey(key)
 			_, err := fmt.Fprintf(w, `{"%s": "%s"}`, key, value)
 			if err != nil {
 				log.Fatal(err)
 			}
 		case http.MethodPost:
+			if common.LeaderNodeId == "" {
+				_, err := fmt.Fprint(w, "CLUSTER HAS DOWN AND YOU CAN'T POST ANY DATA!!!")
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			}
+
 			// 仅可以向leader写数据
 			if common.LocalNodeId != common.LeaderNodeId {
 				// TODO 可以由follower直接转发HTTP请求到leader

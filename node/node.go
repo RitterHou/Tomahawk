@@ -140,18 +140,18 @@ func SendDataToFollowers(nodes []Node, data []byte) {
 			continue
 		}
 		// 并行的发送数据到follower，提升发送效率
-		go func() {
+		go func(n Node) { // 这里的变量不能使用闭包，否则会有问题
 			_, err := n.Conn.Write(data)
 			if err != nil {
 				log.Println(err)
 			}
-		}()
+		}(n)
 	}
 }
 
 // 发送entries信息给follower
 func SendAppendEntries() {
-	replicatedNum := uint32(0) // 记录已经成功复制的follower
+	replicatedNum := uint32(1) // 记录已经成功复制的follower
 
 	for _, n := range GetNodes() {
 		if n.Conn == nil {
@@ -162,8 +162,7 @@ func SendAppendEntries() {
 		}
 		// 这里的变量不能使用闭包，否则会有问题
 		go func(n Node) {
-		SendData:
-			entries := common.GetEntries()[n.NextIndex-1:]
+			entries := common.GetEntries()[n.NextIndex:]
 			entriesLength := len(entries)
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) for %s entriesLength: %d and nextIndex: %d\n", common.LocalNodeId, n.NodeId, entriesLength, n.NextIndex)
@@ -181,7 +180,6 @@ func SendAppendEntries() {
 				data = append(data, common.EncodeEntry(entries[i])...)
 				commitIndex = common.Max(commitIndex, entries[i].Index) // 获取到最大的Index
 			}
-		Timeout:
 			// 发送appendEntries给follower
 			_, err := n.Conn.Write(data)
 			if err != nil {
@@ -198,26 +196,25 @@ func SendAppendEntries() {
 					log.Printf("%s(me) get AppendEntries Reponse: %v\n", common.LocalNodeId, appendSuccess)
 				}
 				if appendSuccess {
+					// Append成功，该follower已经追上leader的entries进度
+					UpdateNextIndexByNodeId(n.NodeId, common.GetEntriesLength())
 					UpdateMatchIndex(n.NodeId)
 					atomic.AddUint32(&replicatedNum, 1)
 					if replicatedNum == common.Quorum { // 只触发一次
 						common.LeaderAppendSuccess <- true  // client返回
 						common.CommittedIndex = commitIndex // commit
 					}
-					return
 				} else {
 					// 发送失败，减小nextIndex进行重试
 					n.NextIndex = n.NextIndex - 1 // 局部变量，只能在当前环境使用，需要进一步同步
 					UpdateNextIndexByNodeId(n.NodeId, n.NextIndex)
-					goto SendData
 				}
-				// todo 似乎不需要手动重试，因为心跳会自动重试
-			case <-time.After(time.Duration(common.LeaderResendAppendEntriesTimeout) * time.Millisecond):
-				// 超时重试
+			case <-time.After(time.Duration(common.LeaderAppendEntriesTimeout) * time.Millisecond):
+				// AppendEntries超时，不需要手动重试，因为leader的下一次心跳
+				// 将在 LeaderCycleTimeout - LeaderAppendEntriesTimeout 后发生，心跳会实现下一次重试
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) to %s AppendEntries timeout and retry\n", common.LocalNodeId, n.NodeId)
 				}
-				goto Timeout
 			}
 		}(n)
 	}

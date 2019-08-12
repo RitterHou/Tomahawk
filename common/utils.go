@@ -120,17 +120,17 @@ func AppendEntryList(entryList []Entry) []Entry {
 	return entryList // 被append的数据
 }
 
-//// 根据key获取entry
-//func GetEntryByKey(key string) string {
-//	defer entryMutex.Unlock()
-//	entryMutex.Lock()
-//	for i := len(logEntries); i > 0; i-- {
-//		if logEntries[i].Key == key {
-//			return logEntries[i].Value
-//		}
-//	}
-//	return ""
-//}
+// 根据key获取entry
+func GetEntryByKey(key string) string {
+	defer entryMutex.Unlock()
+	entryMutex.Lock()
+	for i := len(logEntries) - 1; i >= 0; i-- {
+		if logEntries[i].Key == key {
+			return logEntries[i].Value
+		}
+	}
+	return ""
+}
 
 // 根据索引获取Entry
 func GetEntryByIndex(index uint32) Entry {

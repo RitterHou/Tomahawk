@@ -78,7 +78,8 @@ func StartHttpServer(port uint) {
 		switch r.Method {
 		case http.MethodGet:
 			key := r.URL.Query().Get("key")
-			_, err := fmt.Fprintf(w, `{"%s": "%s"}`, key, "233333")
+			value := common.GetEntryByKey(key)
+			_, err := fmt.Fprintf(w, `{"%s": "%s"}`, key, value)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -89,7 +90,7 @@ func StartHttpServer(port uint) {
 				leaderHttp := ""
 				for _, n := range node.GetNodes() {
 					if n.NodeId == common.LeaderNodeId {
-						leaderHttp = fmt.Sprintf("http://%s:%d/", n.Ip, n.HTTPPort)
+						leaderHttp = fmt.Sprintf("http://%s:%d/entries", n.Ip, n.HTTPPort)
 					}
 				}
 				_, err := fmt.Fprintf(w, `This node is not leader, please post data to leader %s: %s`,

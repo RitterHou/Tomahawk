@@ -361,7 +361,7 @@ func handleConnection(c net.Conn) {
 			}
 
 			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d, entriesLength: %d, result: %v, resultTerm: %d\n",
-				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex, len(entries), appendSuccess, common.CurrentTerm)
+				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex, appendEntriesLength, appendSuccess, common.CurrentTerm)
 		case common.AppendEntriesResponse:
 			resSuccessBuf, success := read(1)
 			if !success {
@@ -377,6 +377,10 @@ func handleConnection(c net.Conn) {
 				return
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
+			if term > common.CurrentTerm {
+				common.CurrentTerm = term
+				common.Role = common.Follower
+			}
 
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("AppendEntriesResponse, term: %d, success: %t\n", term, resSuccess)

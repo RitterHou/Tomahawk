@@ -179,6 +179,30 @@ func EncodeEntry(entry Entry) []byte {
 	return data
 }
 
+// 更新角色的状态
+func ChangeRole(role byte) {
+	Role = role
+
+	// 角色变成了follower，重置记录的leader节点
+	if role == Follower {
+		LeaderNodeId = ""
+	}
+
+	if role == Candidate {
+		LeaderNodeId = ""
+	}
+
+	// 当前节点为leader节点
+	if role == Leader {
+		LeaderNodeId = LocalNodeId
+	}
+}
+
+// 更新选举任期
+func ChangeTerm(term uint32) {
+	CurrentTerm = term
+}
+
 func Min(m, n uint32) uint32 {
 	if m < n {
 		return m

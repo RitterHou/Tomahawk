@@ -49,6 +49,13 @@ func StartHttpServer(port uint) {
 			}
 			return
 		}
+		if common.LeaderNodeId == "" {
+			_, err := fmt.Fprintln(w, "Cluster is down because LeaderNodeId is \"\"")
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
 		_, err := fmt.Fprintln(w, "       NodeId      Host")
 		if err != nil {
 			log.Fatal(err)

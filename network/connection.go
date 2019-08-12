@@ -93,6 +93,17 @@ func handleConnection(c net.Conn) {
 					log.Println("connection closed by remote:", c.RemoteAddr())
 				}
 				node.RemoveNodeById(remoteNodeId)
+
+				if common.Role == common.Leader {
+					// leader可能会因为节点的丢失导致quorum不满足选举的要求
+					if uint32(len(node.GetNodes())) < common.Quorum {
+						if tog.LogLevel(tog.INFO) {
+							log.Printf("Leader %s became follower because [node size %d] < [quorum %d]\n",
+								common.LocalNodeId, len(node.GetNodes()), common.Quorum)
+						}
+						common.ChangeRole(common.Follower)
+					}
+				}
 				return nil, false
 			}
 			log.Fatal(err)
@@ -327,14 +338,14 @@ func handleConnection(c net.Conn) {
 			case common.Leader:
 				// 比当前term要大，当前节点恢复follower状态
 				if leaderTerm > common.CurrentTerm {
-					common.Role = common.Follower
+					common.ChangeRole(common.Follower)
 				} else {
 					appendSuccess = false // 拒绝这次AppendEntries
 				}
 			case common.Candidate:
 				// leader的term不小于自己的term，重新变为follower状态
 				if leaderTerm >= common.CurrentTerm {
-					common.Role = common.Follower
+					common.ChangeRole(common.Follower)
 					common.VoteSuccessCh <- false
 				} else {
 					appendSuccess = false // 拒绝这次AppendEntries
@@ -342,7 +353,7 @@ func handleConnection(c net.Conn) {
 			case common.Follower:
 				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
-				common.CurrentTerm = leaderTerm
+				common.ChangeTerm(leaderTerm)
 				common.LeaderNodeId = remoteNodeId // 设置leader节点
 			}
 
@@ -378,8 +389,8 @@ func handleConnection(c net.Conn) {
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
 			if term > common.CurrentTerm {
-				common.CurrentTerm = term
-				common.Role = common.Follower
+				common.ChangeTerm(term)
+				common.ChangeRole(common.Follower)
 			}
 
 			if tog.LogLevel(tog.DEBUG) {
@@ -420,7 +431,7 @@ func handleConnection(c net.Conn) {
 
 			// 大于当前的任期
 			if candidateTerm >= common.CurrentTerm {
-				common.CurrentTerm = candidateTerm
+				common.ChangeTerm(candidateTerm)
 				// 尚未投票或者投给了candidate
 				if nodeId, ok := common.VoteFor[candidateTerm]; !ok || nodeId == remoteNodeId {
 					// candidate的最新数据比当前节点的数据要新
@@ -463,7 +474,7 @@ func handleConnection(c net.Conn) {
 				}
 			} else {
 				if term > common.CurrentTerm {
-					common.CurrentTerm = term
+					common.ChangeTerm(term)
 					common.VoteSuccessCh <- false
 				}
 			}

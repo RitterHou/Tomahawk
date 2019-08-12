@@ -20,7 +20,8 @@ func Run() {
 					//log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
 				}
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
-				common.Role = common.Candidate // 更新为候选人
+				// 更新为候选人
+				common.ChangeRole(common.Candidate)
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) heartbeat timeout and become candidate\n", common.LocalNodeId)
 				}
@@ -50,11 +51,10 @@ func Run() {
 			select {
 			case success := <-common.VoteSuccessCh:
 				if success {
-					common.Role = common.Leader
+					common.ChangeRole(common.Leader)
 					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
 					}
-					common.LeaderNodeId = common.LocalNodeId // 当前节点为leader节点
 
 					// 刚刚当选的时候添加一条 no operation 的日志记录
 					noOp := common.Entry{Key: "", Value: ""}
@@ -70,7 +70,7 @@ func Run() {
 					// common.LeaderSendEntryCh <- true, leader在这个周期再超时一次也没有关系
 					node.SendAppendEntries()
 				} else {
-					common.Role = common.Follower
+					common.ChangeRole(common.Follower)
 					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote failed and becmoe follower\n", common.LocalNodeId)
 					}

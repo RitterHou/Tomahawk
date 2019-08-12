@@ -1,6 +1,7 @@
 package common
 
 import (
+	"../tog"
 	"encoding/binary"
 	"log"
 	"math/rand"
@@ -181,6 +182,10 @@ func EncodeEntry(entry Entry) []byte {
 
 // 更新角色的状态
 func ChangeRole(role byte) {
+	if tog.LogLevel(tog.DEBUG) {
+		log.Printf("%s(me) change role form %v to %v\n", LocalNodeId, Role, role)
+	}
+
 	Role = role
 
 	// 角色变成了follower，重置记录的leader节点
@@ -200,6 +205,10 @@ func ChangeRole(role byte) {
 
 // 更新选举任期
 func ChangeTerm(term uint32) {
+	if tog.LogLevel(tog.DEBUG) {
+		log.Printf("%s(me) change term form %v to %v\n", LocalNodeId, CurrentTerm, term)
+	}
+
 	CurrentTerm = term
 }
 

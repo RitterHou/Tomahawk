@@ -193,7 +193,8 @@ func SendAppendEntries() {
 			select {
 			case appendSuccess := <-n.AppendSuccess:
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) get AppendEntries Reponse: %v\n", common.LocalNodeId, appendSuccess)
+					log.Printf("%s(me) get AppendEntries Reponse from %s: %v\n",
+						common.LocalNodeId, n.NodeId, appendSuccess)
 				}
 				if appendSuccess {
 					// Append成功，该follower已经追上leader的entries进度

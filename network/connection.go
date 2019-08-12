@@ -388,13 +388,19 @@ func handleConnection(c net.Conn) {
 				return
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("%s get AppendEntriesResponse from %s, term: %s, local term: %d\n",
+					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm)
+			}
 			if term > common.CurrentTerm {
+				log.Printf("Update current term %d->%d and become follower\n", common.CurrentTerm, term)
 				common.ChangeTerm(term)
 				common.ChangeRole(common.Follower)
 			}
 
 			if tog.LogLevel(tog.DEBUG) {
-				log.Printf("AppendEntriesResponse, term: %d, success: %t\n", term, resSuccess)
+				log.Printf("AppendEntriesResponse from %s, term: %d, success: %t\n",
+					remoteNodeId, term, resSuccess)
 			}
 
 			n := node.GetNode(remoteNodeId)
@@ -432,6 +438,7 @@ func handleConnection(c net.Conn) {
 			// 大于当前的任期
 			if candidateTerm >= common.CurrentTerm {
 				common.ChangeTerm(candidateTerm)
+				common.ChangeRole(common.Follower)
 				// 尚未投票或者投给了candidate
 				if nodeId, ok := common.VoteFor[candidateTerm]; !ok || nodeId == remoteNodeId {
 					// candidate的最新数据比当前节点的数据要新
@@ -444,6 +451,10 @@ func handleConnection(c net.Conn) {
 
 			var response = []byte{common.VoteResponse}
 			if voteSuccess {
+				if tog.LogLevel(tog.DEBUG) {
+					log.Printf("%s(me) send vote for %s, term %d\n",
+						common.LocalNodeId, remoteNodeId, common.CurrentTerm)
+				}
 				response = append(response, byte(1)) // 投票
 			} else {
 				response = append(response, byte(0)) // 不投票
@@ -475,6 +486,7 @@ func handleConnection(c net.Conn) {
 			} else {
 				if term > common.CurrentTerm {
 					common.ChangeTerm(term)
+					common.ChangeRole(common.Follower)
 					common.VoteSuccessCh <- false
 				}
 			}

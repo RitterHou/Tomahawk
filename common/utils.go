@@ -181,7 +181,7 @@ func EncodeEntry(entry Entry) []byte {
 }
 
 // 更新角色的状态
-func ChangeRole(role byte) {
+func ChangeRole(role RoleType) {
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) change role form %v to %v\n", LocalNodeId, Role, role)
 	}

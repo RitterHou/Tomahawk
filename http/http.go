@@ -183,6 +183,23 @@ func StartHttpServer(port uint) {
 		}
 	})
 
+	http.HandleFunc("/rikka", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+			_, err := fmt.Fprintln(w, "Only allow method [GET].")
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+		w.Header().Set("Content-Length", common.RikkaLength)
+		w.Header().Set("Content-Type", "image/png")
+		_, err := w.Write(common.Rikka)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+
 	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
 	}

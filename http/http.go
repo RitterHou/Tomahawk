@@ -149,11 +149,21 @@ func StartHttpServer(port uint) {
 				entries[0] = entry
 			}
 
+			response := ""
 			for _, e := range entries {
-				_, err = fmt.Fprintf(w, "Post Success: {\"%s\": \"%s\"}\n", e.Key, e.Value)
-				if err != nil {
-					log.Fatal(err)
+				if e.Key == "" {
+					_, err = fmt.Fprint(w, "Post failed because key can't be nil")
+					if err != nil {
+						log.Fatal(err)
+					}
+					return
 				}
+				response += fmt.Sprintf("Post Success: {\"%s\": \"%s\"}\n", e.Key, e.Value)
+			}
+
+			_, err = fmt.Fprint(w, response)
+			if err != nil {
+				log.Fatal(err)
 			}
 
 			// 把entries加入到leader本地的log[]中

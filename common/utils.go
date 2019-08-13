@@ -107,9 +107,10 @@ var logEntries = []Entry{{Key: "", Value: "", Term: 0, Index: 0}} // 初始化�
 var entryMutex sync.Mutex
 
 // 只有leader可以这样顺序的append entry数据
-func AppendEntryList(entryList []Entry) []Entry {
+func AppendEntryList(entryList []Entry) {
 	if Role != Leader {
-		return nil
+		log.Fatalf("Current node %s, and leader is %s, only leader can append entries",
+			LocalNodeId, LeaderNodeId)
 	}
 	entryMutex.Lock()
 	for i := 0; i < len(entryList); i++ {
@@ -118,7 +119,6 @@ func AppendEntryList(entryList []Entry) []Entry {
 		logEntries = append(logEntries, entryList[i])
 	}
 	entryMutex.Unlock()
-	return entryList // 被append的数据
 }
 
 // 根据key获取entry

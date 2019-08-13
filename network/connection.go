@@ -58,6 +58,9 @@ func Listen(port uint) {
 // 处理TCP连接，此时已经不区分client与server
 func handleConnection(c net.Conn) {
 	defer func() {
+		if tog.LogLevel(tog.INFO) {
+			log.Printf("close connection %v\n", c)
+		}
 		err := c.Close()
 		if err != nil {
 			log.Fatal(err)
@@ -88,22 +91,18 @@ func handleConnection(c net.Conn) {
 		data := make([]byte, length)
 		_, err := c.Read(data)
 		if err != nil {
-			if err == io.EOF {
-				if tog.LogLevel(tog.WARN) {
-					log.Println("connection closed by remote:", c.RemoteAddr())
-				}
-				node.RemoveNodeById(remoteNodeId)
-
-				if common.Role == common.Leader {
-					// leader可能会因为节点的丢失导致quorum不满足选举的要求
-					if uint32(len(node.GetNodes())) < common.Quorum {
-						if tog.LogLevel(tog.INFO) {
-							log.Printf("Leader %s became follower because [node size %d] < [quorum %d]\n",
-								common.LocalNodeId, len(node.GetNodes()), common.Quorum)
-						}
-						common.ChangeRole(common.Follower)
+			if err == io.EOF || strings.ContainsAny(err.Error(), "connection reset by peer") {
+				if err == io.EOF {
+					if tog.LogLevel(tog.WARN) {
+						log.Println("connection closed by remote:", c.RemoteAddr())
+					}
+				} else {
+					if tog.LogLevel(tog.WARN) {
+						log.Println(err)
 					}
 				}
+
+				node.RemoveNodeById(remoteNodeId)
 				return nil, false
 			}
 			log.Fatal(err)
@@ -389,7 +388,7 @@ func handleConnection(c net.Conn) {
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
 			if tog.LogLevel(tog.DEBUG) {
-				log.Printf("%s get AppendEntriesResponse from %s, term: %s, local term: %d\n",
+				log.Printf("%s get AppendEntriesResponse from %s, term: %d, local term: %d\n",
 					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm)
 			}
 			if term > common.CurrentTerm {

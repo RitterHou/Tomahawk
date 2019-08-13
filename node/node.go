@@ -4,6 +4,7 @@ import (
 	"../common"
 	"../tog"
 	"fmt"
+	"github.com/getlantern/errors"
 	"log"
 	"net"
 	"strings"
@@ -60,6 +61,17 @@ func RemoveNodeById(nodeId string) {
 	mutex.Lock()
 	delete(nodes, nodeId)
 	mutex.Unlock()
+
+	if common.Role == common.Leader {
+		// leader可能会因为节点的丢失导致quorum不满足选举的要求
+		if uint32(len(GetNodes())) < common.Quorum {
+			if tog.LogLevel(tog.INFO) {
+				log.Printf("Leader %s became follower because [node size %d] < [quorum %d]\n",
+					common.LocalNodeId, len(GetNodes()), common.Quorum)
+			}
+			common.ChangeRole(common.Follower)
+		}
+	}
 }
 
 func ExistNode(nodeId string) bool {
@@ -133,6 +145,24 @@ func UpdateLocalIp(conn net.Conn) {
 	}
 }
 
+func sendData(n Node, data []byte) error {
+	_, err := n.Conn.Write(data)
+	if err != nil {
+		log.Println(err)
+		if tog.LogLevel(tog.WARN) {
+			log.Printf("colse connection %v\n", n.Conn)
+		}
+		// 关闭连接
+		err = n.Conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		RemoveNodeById(n.NodeId) // 连接出现异常，移除该节点
+		return errors.New(fmt.Sprintf("%v write data failed", n.Conn))
+	}
+	return nil
+}
+
 // 给所有的节点发送数据
 func SendDataToFollowers(nodes []Node, data []byte) {
 	for _, n := range nodes {
@@ -141,10 +171,7 @@ func SendDataToFollowers(nodes []Node, data []byte) {
 		}
 		// 并行的发送数据到follower，提升发送效率
 		go func(n Node) { // 这里的变量不能使用闭包，否则会有问题
-			_, err := n.Conn.Write(data)
-			if err != nil {
-				log.Println(err)
-			}
+			_ = sendData(n, data)
 		}(n)
 	}
 }
@@ -180,10 +207,11 @@ func SendAppendEntries() {
 				data = append(data, common.EncodeEntry(entries[i])...)
 				commitIndex = common.Max(commitIndex, entries[i].Index) // 获取到最大的Index
 			}
+
 			// 发送appendEntries给follower
-			_, err := n.Conn.Write(data)
+			err := sendData(n, data)
 			if err != nil {
-				log.Println(err)
+				// 如果发送失败则无需再进行接下来的操作
 				return
 			}
 

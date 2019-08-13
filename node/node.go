@@ -145,6 +145,7 @@ func UpdateLocalIp(conn net.Conn) {
 	}
 }
 
+// 向指定节点发送数据
 func sendData(n Node, data []byte) error {
 	_, err := n.Conn.Write(data)
 	if err != nil {

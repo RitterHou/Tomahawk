@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 )
 
+// 连接远程主机
 func Connect(host string) {
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
@@ -371,7 +372,7 @@ func handleConnection(c net.Conn) {
 				log.Fatal(err)
 			}
 
-			log.Printf("leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d, entriesLength: %d, result: %v, resultTerm: %d\n",
+			log.Printf("AppendEntries leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d, entriesLength: %d, result: %v, resultTerm: %d\n",
 				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex, appendEntriesLength, appendSuccess, common.CurrentTerm)
 		case common.AppendEntriesResponse:
 			resSuccessBuf, success := read(1)
@@ -389,18 +390,13 @@ func handleConnection(c net.Conn) {
 			}
 			term := binary.LittleEndian.Uint32(termBuf)
 			if tog.LogLevel(tog.DEBUG) {
-				log.Printf("%s get AppendEntriesResponse from %s, term: %d, local term: %d\n",
-					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm)
+				log.Printf("%s Get AppendEntriesResponse from %s, term: %d, local term: %d, success: %t\n",
+					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm, resSuccess)
 			}
 			if term > common.CurrentTerm {
 				log.Printf("Update current term %d->%d and become follower\n", common.CurrentTerm, term)
 				common.ChangeTerm(term)
 				common.ChangeRole(common.Follower)
-			}
-
-			if tog.LogLevel(tog.DEBUG) {
-				log.Printf("AppendEntriesResponse from %s, term: %d, success: %t\n",
-					remoteNodeId, term, resSuccess)
 			}
 
 			n := node.GetNode(remoteNodeId)

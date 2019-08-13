@@ -115,8 +115,8 @@ func AppendEntryList(entryList []Entry) []Entry {
 	for i := 0; i < len(entryList); i++ {
 		entryList[i].Term = CurrentTerm
 		entryList[i].Index = GetEntriesLength() // Index自增
+		logEntries = append(logEntries, entryList[i])
 	}
-	logEntries = append(logEntries, entryList...)
 	entryMutex.Unlock()
 	return entryList // 被append的数据
 }

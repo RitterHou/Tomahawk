@@ -150,7 +150,8 @@ func sendData(n Node, data []byte) error {
 	if err != nil {
 		log.Println(err)
 		if tog.LogLevel(tog.WARN) {
-			log.Printf("colse connection %v\n", n.Conn)
+			log.Printf("colse connection %s -> %s\n",
+				n.Conn.LocalAddr().String(), n.Conn.RemoteAddr().String())
 		}
 		// 关闭连接
 		err = n.Conn.Close()

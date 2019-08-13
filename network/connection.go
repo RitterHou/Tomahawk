@@ -59,7 +59,8 @@ func Listen(port uint) {
 func handleConnection(c net.Conn) {
 	defer func() {
 		if tog.LogLevel(tog.INFO) {
-			log.Printf("close connection %v\n", c)
+			log.Printf("colse connection %s -> %s\n",
+				c.LocalAddr().String(), c.RemoteAddr().String())
 		}
 		err := c.Close()
 		if err != nil {

@@ -37,11 +37,28 @@ const (
 	VoteResponse                      // 投票的响应
 )
 
+// 定义一个表示角色的类型
+type RoleType byte
+
+func (t RoleType) String() string {
+	switch t {
+	case Follower:
+		return "Follower"
+	case Candidate:
+		return "Candidate"
+	case Leader:
+		return "Leader"
+	default:
+		return "Unknown Role"
+	}
+}
+
+// 当前的角色类型
 var Role = Follower
 
 // 节点类型
 const (
-	Follower byte = iota
+	Follower RoleType = iota
 	Candidate
 	Leader
 )

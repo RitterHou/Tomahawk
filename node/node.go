@@ -3,8 +3,8 @@ package node
 import (
 	"../common"
 	"../tog"
+	"errors"
 	"fmt"
-	"github.com/getlantern/errors"
 	"log"
 	"net"
 	"strings"

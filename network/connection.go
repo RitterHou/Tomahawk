@@ -137,7 +137,7 @@ func handleConnection(c net.Conn) {
 	for {
 		dataType, success := read(1)
 		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("%s read data type: %v\n", common.LocalNodeId, dataType)
+			log.Printf("%s read data type: %v\n", common.LocalNodeId, common.GetSocketDataType(dataType[0]))
 		}
 		if !success {
 			return
@@ -375,8 +375,9 @@ func handleConnection(c net.Conn) {
 				log.Fatal(err)
 			}
 
-			log.Printf("AppendEntries leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d, entriesLength: %d, result: %v, resultTerm: %d\n",
-				leaderPrevLogIndex, leaderPrevLogTerm, leaderCommittedIndex, appendEntriesLength, appendSuccess, common.CurrentTerm)
+			log.Printf("AppendEntries leaderPrevLogIndex: %d, leaderPrevLogTerm: %d, leaderCommittedIndex: %d,"+
+				" entriesLength: %d, result: %v, resultTerm: %d\n", leaderPrevLogIndex, leaderPrevLogTerm,
+				leaderCommittedIndex, appendEntriesLength, appendSuccess, common.CurrentTerm)
 		case common.AppendEntriesResponse:
 			resSuccessBuf, success := read(1)
 			if !success {

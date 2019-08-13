@@ -37,6 +37,26 @@ const (
 	VoteResponse                      // 投票的响应
 )
 
+// 根据网络传输类型获取相应的字符串
+func GetSocketDataType(socketType byte) string {
+	switch socketType {
+	case ExchangeNodeInfo:
+		return "ExchangeNodeInfo"
+	case ShareNodes:
+		return "ShareNodes"
+	case AppendEntries:
+		return "AppendEntries"
+	case AppendEntriesResponse:
+		return "AppendEntriesResponse"
+	case VoteRequest:
+		return "VoteRequest"
+	case VoteResponse:
+		return "VoteResponse"
+	default:
+		return "Unknown Socket Type"
+	}
+}
+
 // 定义一个表示角色的类型
 type RoleType byte
 

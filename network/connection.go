@@ -141,9 +141,10 @@ func handleConnection(c net.Conn) {
 			return
 		}
 
+		socketDataType := common.GetSocketDataType(dataType[0])
 		readRemoteDataStart := time.Now().UnixNano()
 		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("%s read data type: %v\n", common.LocalNodeId, common.GetSocketDataType(dataType[0]))
+			log.Printf("%s read data type: %v\n", common.LocalNodeId, socketDataType)
 		}
 
 		switch dataType[0] {
@@ -496,8 +497,9 @@ func handleConnection(c net.Conn) {
 		}
 
 		readRemoteDataEnd := time.Now().UnixNano()
+		readRemoteDataCost := readRemoteDataEnd - readRemoteDataStart
 		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("Cost %dms\n", (readRemoteDataEnd-readRemoteDataStart)/1e6)
+			log.Printf("Cost %dms %dns, %s\n", readRemoteDataCost/1e6, readRemoteDataCost, socketDataType)
 		}
 	}
 }

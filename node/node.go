@@ -26,7 +26,7 @@ func AddNode(node Node) {
 	}
 	mutex.Lock()
 	if node.AppendSuccess == nil { // 初始化
-		node.AppendSuccess = make(chan bool, 1)
+		node.AppendSuccess = make(chan bool, 10) // 增加缓冲区防止leader的AppendEntries超时导致response被阻塞
 	}
 	nodes[node.NodeId] = node
 	mutex.Unlock()
@@ -44,7 +44,7 @@ func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 		return
 	}
 	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("Update %s.nextIndex: %d\n", nodeId, nextIndex)
+		log.Printf("Update %s.nextIndex -> %d\n", nodeId, nextIndex)
 	}
 	n := nodes[nodeId]
 	n.NextIndex = nextIndex
@@ -191,18 +191,30 @@ func SendAppendEntries() {
 		}
 		// 这里的变量不能使用闭包，否则会有问题
 		go func(n Node) {
+			// 如果上次的leader超时了，但是后来follower又返回了数据，则channel不为空
+			// 因此为了排除影响，需要清空channel
+			for len(n.AppendSuccess) > 0 {
+				if tog.LogLevel(tog.DEBUG) {
+					log.Printf("Channel AppendSuccess Length: %d\n", len(n.AppendSuccess))
+				}
+				<-n.AppendSuccess
+			}
+
 			entries := common.GetEntries()[n.NextIndex:]
 			entriesLength := len(entries)
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) for %s entriesLength: %d and nextIndex: %d\n", common.LocalNodeId, n.NodeId, entriesLength, n.NextIndex)
 			}
-			data := append([]byte{common.AppendEntries}, common.Uint32ToBytes(common.CurrentTerm)...)
-			// 此节点对应的最后一个index
-			data = append(data, common.Uint32ToBytes(n.NextIndex-1)...)
-			// 此节点对应的最后一个index的term
-			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(n.NextIndex-1).Term)...)
-			data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)
-			data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)
+
+			// 该follower在leader中所记录的最后一个节点的index
+			followerIndex := n.NextIndex - 1
+
+			data := []byte{common.AppendEntries}
+			data = append(data, common.Uint32ToBytes(common.CurrentTerm)...)                         // 当前任期
+			data = append(data, common.Uint32ToBytes(followerIndex)...)                              // 此follower的最后一个节点
+			data = append(data, common.Uint32ToBytes(common.GetEntryByIndex(followerIndex).Term)...) // 此follower的最后一个节点的任期
+			data = append(data, common.Uint32ToBytes(common.CommittedIndex)...)                      // leader的commitIndex
+			data = append(data, common.Uint32ToBytes(uint32(entriesLength))...)                      // 发送的entries的长度
 
 			commitIndex := uint32(0)
 			for i := 0; i < entriesLength; i++ {
@@ -223,7 +235,7 @@ func SendAppendEntries() {
 			select {
 			case appendSuccess := <-n.AppendSuccess:
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) get AppendEntries Reponse from %s: %v\n",
+					log.Printf("%s(me) Get AppendEntries Reponse from %s: %v\n",
 						common.LocalNodeId, n.NodeId, appendSuccess)
 				}
 				if appendSuccess {

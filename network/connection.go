@@ -11,6 +11,7 @@ import (
 	"net"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 // 连接远程主机
@@ -136,11 +137,13 @@ func handleConnection(c net.Conn) {
 	// 读取远程主机发送的数据
 	for {
 		dataType, success := read(1)
-		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("%s read data type: %v\n", common.LocalNodeId, common.GetSocketDataType(dataType[0]))
-		}
 		if !success {
 			return
+		}
+
+		readRemoteDataStart := time.Now().UnixNano()
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("%s read data type: %v\n", common.LocalNodeId, common.GetSocketDataType(dataType[0]))
 		}
 
 		switch dataType[0] {
@@ -490,6 +493,11 @@ func handleConnection(c net.Conn) {
 					common.VoteSuccessCh <- false
 				}
 			}
+		}
+
+		readRemoteDataEnd := time.Now().UnixNano()
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("Cost %dms\n", (readRemoteDataEnd-readRemoteDataStart)/1e6)
 		}
 	}
 }

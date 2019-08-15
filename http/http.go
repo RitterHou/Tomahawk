@@ -16,7 +16,18 @@ import (
 func StartHttpServer(port uint) {
 	// 显示服务器信息
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		if r.URL.Path != "/" {
+			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			html := `<!doctype html><head><title>Oops, 404 page not found</title></head><body><img src="/rikka" /></body>`
+			_, err := fmt.Fprint(w, html)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		if r.Method != http.MethodGet {
 			_, err := fmt.Fprintln(w, "Only allow method [GET].")
 			if err != nil {
@@ -41,7 +52,7 @@ func StartHttpServer(port uint) {
 
 	// 显示所有的节点信息
 	http.HandleFunc("/nodes", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		if r.Method != http.MethodGet {
 			_, err := fmt.Fprintln(w, "Only allow method [GET].")
 			if err != nil {
@@ -74,7 +85,7 @@ func StartHttpServer(port uint) {
 
 	// 读写数据
 	http.HandleFunc("/entries", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		switch r.Method {
 		case http.MethodGet:
 			key := r.URL.Query().Get("key")
@@ -185,7 +196,7 @@ func StartHttpServer(port uint) {
 
 	http.HandleFunc("/rikka", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			_, err := fmt.Fprintln(w, "Only allow method [GET].")
 			if err != nil {
 				log.Fatal(err)

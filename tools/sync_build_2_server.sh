@@ -6,7 +6,7 @@ cd ..              # 工程根目录
 
 ./build.sh -c 'linux:amd64'
 
-declare -a servers=('172.21.34.245' '172.21.34.202' '172.21.3.92')
+declare -a servers=('172.21.3.39' '172.21.3.92' '172.21.3.177')
 
 for server in "${servers[@]}"
 do

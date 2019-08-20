@@ -19,8 +19,7 @@ func StartHttpServer(port uint) {
 		if r.URL.Path != "/" {
 			w.WriteHeader(http.StatusNotFound)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			html := `<!doctype html><head><title>Oops, 404 page not found</title></head><body><img src="/rikka" /></body>`
-			_, err := fmt.Fprint(w, html)
+			_, err := fmt.Fprint(w, common.NotFoundHtml)
 			if err != nil {
 				log.Fatal(err)
 			}

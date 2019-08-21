@@ -14,3 +14,5 @@ do
     rsync -avz -e 'ssh -p 22' ./Tomahawk_linux_amd64 root@${server}:/home/tomahawk
     ssh root@${server} 'chown -R tomahawk:tomahawk /home/tomahawk/Tomahawk_linux_amd64'
 done
+
+# 如果不想每一次都输入密码，只需要把本地的 ~/.ssh/id_rsa.pub 添加到服务器的 ~/.ssh/authorized_keys 中去就可以了

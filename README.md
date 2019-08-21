@@ -1,3 +1,5 @@
+[![logo](logo.png)](https://github.com/RitterHou/Tomahawk)
+
 # Tomahawk
 
 [![Build Status](https://travis-ci.org/RitterHou/Tomahawk.svg?branch=master)](https://travis-ci.org/RitterHou/Tomahawk)

@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -93,11 +94,12 @@ func StartHttpServer(port uint) {
 			key := r.URL.Query().Get("key")
 			if key == "" {
 				entries := common.GetEntries()
-				_, err := fmt.Fprintf(w, "Total entries: %d\n", len(entries))
+				from, size := getFromAndSize(r.URL.Query().Get("from"), r.URL.Query().Get("size"), len(entries))
+				_, err := fmt.Fprintf(w, "Total entries: %d, from: %d, size: %d\n", len(entries), from, size)
 				if err != nil {
 					log.Fatal(err)
 				}
-				for _, entry := range entries {
+				for _, entry := range entries[from : from+size] {
 					_, err := fmt.Fprintf(w, `{"key": "%s", "value": "%s", "index": "%d", "term": "%d", "time": "%s"}`+"\n",
 						entry.Key, entry.Value, entry.Index, entry.Term,
 						time.Unix(int64(entry.Time), 0).Format("2006-01-02 15:04:05"))
@@ -107,10 +109,18 @@ func StartHttpServer(port uint) {
 				}
 				return
 			}
-			value := common.GetEntryByKey(key)
-			_, err := fmt.Fprintf(w, `{"%s": "%s"}`, key, value)
-			if err != nil {
-				log.Fatal(err)
+			value, ok := common.GetEntryByKey(key)
+			if ok {
+				_, err := fmt.Fprintf(w, `{"%s": "%s"}`, key, value)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				w.WriteHeader(http.StatusNotFound) // 没找到相应的key
+				_, err := fmt.Fprintf(w, "can't found key [%s]", key)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		case http.MethodPost:
 			if common.LeaderNodeId == "" {
@@ -263,4 +273,30 @@ func postJson(url string, data []byte) (int, http.Header, []byte) {
 		log.Fatal(err)
 	}
 	return res.StatusCode, res.Header, body
+}
+
+// 解析得到合适的from和size属性的值
+func getFromAndSize(fromStr, sizeStr string, entriesLength int) (from, size int) {
+	var err error
+	from, err = strconv.Atoi(fromStr)
+	if err != nil {
+		from = 0
+	}
+	size, err = strconv.Atoi(sizeStr)
+	if err != nil {
+		size = 10
+	}
+
+	if from >= entriesLength || from < 0 {
+		from = 0
+	}
+
+	if size > entriesLength || size < 0 {
+		size = 10
+	}
+
+	if from+size > entriesLength {
+		size = entriesLength - from
+	}
+	return
 }

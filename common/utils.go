@@ -123,15 +123,15 @@ func AppendEntryList(entryList []Entry) {
 }
 
 // 根据key获取entry
-func GetEntryByKey(key string) string {
+func GetEntryByKey(key string) (string, bool) {
 	defer entryMutex.Unlock()
 	entryMutex.Lock()
 	for i := len(logEntries) - 1; i >= 0; i-- {
 		if logEntries[i].Key == key {
-			return logEntries[i].Value
+			return logEntries[i].Value, true
 		}
 	}
-	return ""
+	return "", false
 }
 
 // 根据索引获取Entry

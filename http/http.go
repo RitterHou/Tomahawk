@@ -4,12 +4,14 @@ import (
 	"../common"
 	"../node"
 	"../tog"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -119,33 +121,35 @@ func StartHttpServer(port uint) {
 				return
 			}
 
+			if r.Body == nil {
+				http.Error(w, "Please send a request body", 400)
+				return
+			}
+			bodyBuf, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			// 仅可以向leader写数据
 			if common.LocalNodeId != common.LeaderNodeId {
-				// TODO 可以由follower直接转发HTTP请求到leader，但是是否有这个必要？
-				leaderHttp := ""
+				leaderUrl := ""
 				for _, n := range node.GetNodes() {
 					if n.NodeId == common.LeaderNodeId {
-						leaderHttp = fmt.Sprintf("http://%s:%d/entries", n.Ip, n.HTTPPort)
+						leaderUrl = fmt.Sprintf("http://%s:%d/entries", n.Ip, n.HTTPPort)
 					}
 				}
-				_, err := fmt.Fprintf(w, `This node is not leader, please post data to leader %s: %s`,
-					common.LeaderNodeId, leaderHttp)
+				// 进行entries转发，因为当前节点不是leader，把entries转发到leader节点上去
+				status, header, body := postJson(leaderUrl, bodyBuf)
+				w.WriteHeader(status)
+				for k, v := range header {
+					w.Header().Set(k, strings.Join(v, " "))
+				}
+				_, err = w.Write(body)
 				if err != nil {
 					log.Fatal(err)
 				}
 				return
 			}
-
-			if r.Body == nil {
-				http.Error(w, "Please send a request body", 400)
-				return
-			}
-
-			bodyBuf, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			body := string(bodyBuf)
 
 			var entries []common.Entry
 			err = json.Unmarshal(bodyBuf, &entries) // 优先解析JSON数组
@@ -154,7 +158,7 @@ func StartHttpServer(port uint) {
 				err := json.Unmarshal(bodyBuf, &entry) // 如果数组解析失败，则解析JSON对象
 				if err != nil {
 					//http.Error(w, err.Error(), 400)
-					http.Error(w, "Post body can't be decode to json: "+body, 400)
+					http.Error(w, "Post body can't be decode to json: "+string(bodyBuf), 400)
 					return
 				}
 				entries = make([]common.Entry, 1)
@@ -232,4 +236,31 @@ func StartHttpServer(port uint) {
 		log.Println("HTTP Server Listening Port", port)
 	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))
+}
+
+// POST JSON data
+func postJson(url string, data []byte) (int, http.Header, []byte) {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res.StatusCode, res.Header, body
 }

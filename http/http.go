@@ -212,6 +212,22 @@ func StartHttpServer(port uint) {
 		}
 	})
 
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			_, err := fmt.Fprintln(w, "Only allow method [GET].")
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+		w.Header().Set("Content-Length", common.IconLength)
+		_, err := w.Write(common.Icon)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+
 	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
 	}

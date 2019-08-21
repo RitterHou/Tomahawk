@@ -322,6 +322,12 @@ func handleConnection(c net.Conn) {
 				// 该Entry在log中的位置
 				index := binary.LittleEndian.Uint32(indexBuf)
 
+				timeBuf, success := read(4)
+				if !success {
+					return
+				}
+				createTime := binary.LittleEndian.Uint32(timeBuf)
+
 				log.Printf("AppendEntries from leader, key: %s, value: %s, term: %d, index: %d\n",
 					key, value, term, index)
 
@@ -333,7 +339,7 @@ func handleConnection(c net.Conn) {
 						common.CutoffEntries(index)
 					}
 					// 把entry保存到follower中去
-					common.SetEntry(common.Entry{Key: key, Value: value, Index: index, Term: term})
+					common.SetEntry(common.Entry{Key: key, Value: value, Index: index, Term: term, Time: createTime})
 				}
 			}
 

@@ -14,8 +14,7 @@ import (
 )
 
 // 节点列表
-var nodes = make(map[string]Node)
-var mutex sync.Mutex
+var nodes sync.Map
 
 func AddNode(node Node) {
 	if node.NodeId == "" {
@@ -24,18 +23,16 @@ func AddNode(node Node) {
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
 	}
-	mutex.Lock()
 	if node.AppendSuccess == nil { // 初始化
 		node.AppendSuccess = make(chan bool, 10) // 增加缓冲区防止leader的AppendEntries超时导致response被阻塞
 	}
-	nodes[node.NodeId] = node
-	mutex.Unlock()
+	nodes.Store(node.NodeId, node)
 }
 
 func UpdateMatchIndex(nodeId string) {
-	n := nodes[nodeId]
+	n := GetNode(nodeId)
 	n.MatchIndex = n.NextIndex
-	nodes[nodeId] = n
+	nodes.Store(nodeId, n)
 }
 
 func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
@@ -46,9 +43,10 @@ func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("Update %s.nextIndex -> %d\n", nodeId, nextIndex)
 	}
-	n := nodes[nodeId]
+
+	n := GetNode(nodeId)
 	n.NextIndex = nextIndex
-	nodes[nodeId] = n
+	nodes.Store(nodeId, n)
 }
 
 func RemoveNodeById(nodeId string) {
@@ -58,9 +56,7 @@ func RemoveNodeById(nodeId string) {
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
 	}
-	mutex.Lock()
-	delete(nodes, nodeId)
-	mutex.Unlock()
+	nodes.Delete(nodeId)
 
 	if common.Role == common.Leader {
 		// leader可能会因为节点的丢失导致quorum不满足选举的要求
@@ -78,7 +74,7 @@ func ExistNode(nodeId string) bool {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	_, ok := nodes[nodeId]
+	_, ok := nodes.Load(nodeId)
 	return ok
 }
 
@@ -86,7 +82,8 @@ func GetNode(nodeId string) Node {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
 	}
-	return nodes[nodeId]
+	n, _ := nodes.Load(nodeId)
+	return n.(Node)
 }
 
 // 用于对结果进行排序
@@ -103,12 +100,11 @@ func (l TheNodeList) Less(i, j int) bool {
 }
 
 func GetNodes() TheNodeList {
-	mutex.Lock()
-	n := make([]Node, 0, len(nodes))
-	for _, val := range nodes {
-		n = append(n, val)
-	}
-	mutex.Unlock()
+	n := make([]Node, 0)
+	nodes.Range(func(key, value interface{}) bool {
+		n = append(n, value.(Node))
+		return true
+	})
 	return n
 }
 
@@ -136,12 +132,12 @@ func UpdateLocalIp(conn net.Conn) {
 	if !ipUpdated {
 		ip := strings.Split(conn.LocalAddr().String(), ":")[0]
 		ipUpdated = true
-		n := nodes[common.LocalNodeId]
+		n := GetNode(common.LocalNodeId)
 		if tog.LogLevel(tog.DEBUG) {
 			log.Printf("Update local IP from %s to %s\n", n.Ip, ip)
 		}
 		n.Ip = ip
-		nodes[common.LocalNodeId] = n
+		nodes.Store(common.LocalNodeId, n)
 	}
 }
 
@@ -249,7 +245,20 @@ func SendAppendEntries() {
 					}
 				} else {
 					// 发送失败，减小nextIndex进行重试
-					n.NextIndex = n.NextIndex - 1 // 局部变量，只能在当前环境使用，需要进一步同步
+
+					// 回退nextIndex到前一个term的最后一个entry的index
+					// 相较于把nextIndex直接减一，这样做更加高效
+					var lastTerm = uint32(0)                        // 后一个entry的term
+					allEntries := common.GetEntries()[:n.NextIndex] // 剔除当前的nextIndex的后面的内容
+					for i := len(allEntries) - 1; i >= 0; i-- {
+						e := allEntries[i]
+						if lastTerm > e.Term { // 找到当前的term所对应初始index
+							n.NextIndex = e.Index + 1
+							break
+						}
+						lastTerm = e.Term
+					}
+
 					UpdateNextIndexByNodeId(n.NodeId, n.NextIndex)
 				}
 			case <-time.After(time.Duration(common.LeaderAppendEntriesTimeout) * time.Millisecond):

@@ -72,6 +72,6 @@ func main() {
 	if err != nil {
 		log.Fatal("json.marshal failed, err:", err)
 	}
-	res := postJSON("http://127.0.0.1:6201/entries", data)
+	res := postJSON("http://172.21.3.39:6200/entries", data)
 	fmt.Println(res)
 }

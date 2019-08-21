@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"time"
 )
 
 // 启动HTTP服务器
@@ -95,8 +96,9 @@ func StartHttpServer(port uint) {
 					log.Fatal(err)
 				}
 				for _, entry := range entries {
-					_, err := fmt.Fprintf(w, `{"key": "%s", "value": "%s", "index": "%d", "term": "%d"}`+"\n",
-						entry.Key, entry.Value, entry.Index, entry.Term)
+					_, err := fmt.Fprintf(w, `{"key": "%s", "value": "%s", "index": "%d", "term": "%d", "time": "%s"}`+"\n",
+						entry.Key, entry.Value, entry.Index, entry.Term,
+						time.Unix(int64(entry.Time), 0).Format("2006-01-02 15:04:05"))
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -119,7 +121,7 @@ func StartHttpServer(port uint) {
 
 			// 仅可以向leader写数据
 			if common.LocalNodeId != common.LeaderNodeId {
-				// TODO 可以由follower直接转发HTTP请求到leader
+				// TODO 可以由follower直接转发HTTP请求到leader，但是是否有这个必要？
 				leaderHttp := ""
 				for _, n := range node.GetNodes() {
 					if n.NodeId == common.LeaderNodeId {

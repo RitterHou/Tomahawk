@@ -116,6 +116,7 @@ func AppendEntryList(entryList []Entry) {
 	for i := 0; i < len(entryList); i++ {
 		entryList[i].Term = CurrentTerm
 		entryList[i].Index = GetEntriesLength() // Index自增
+		entryList[i].Time = MakeTimestamp()
 		logEntries = append(logEntries, entryList[i])
 	}
 	entryMutex.Unlock()
@@ -177,6 +178,7 @@ func EncodeEntry(entry Entry) []byte {
 	data = append(data, AddBufHead([]byte(entry.Value))...)
 	data = append(data, Uint32ToBytes(entry.Term)...)
 	data = append(data, Uint32ToBytes(entry.Index)...)
+	data = append(data, Uint32ToBytes(entry.Time)...)
 	return data
 }
 
@@ -224,4 +226,9 @@ func Max(m, n uint32) uint32 {
 		return n
 	}
 	return m
+}
+
+// 获取当前时间戳
+func MakeTimestamp() uint32 {
+	return uint32(time.Now().Unix())
 }

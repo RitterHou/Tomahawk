@@ -117,6 +117,7 @@ type Entry struct {
 	Value string `json:"value"`
 	Term  uint32 // 添加该条数据时的任期号
 	Index uint32 // 在log中的索引
+	Time  uint32 // 创建时间
 }
 
 // 已经提交的entry索引

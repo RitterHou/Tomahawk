@@ -317,8 +317,10 @@ func handleConnection(c net.Conn) {
 					return
 				}
 
-				log.Printf("AppendEntries from leader, key: %s, value: %s, term: %d, index: %d\n",
-					key, value, term, index)
+				if tog.LogLevel(tog.INFO) {
+					log.Printf("AppendEntry from leader, key: %s, value: %s, term: %d, index: %d\n",
+						key, value, term, index)
+				}
 
 				// 如果可以把entry append到当前节点中
 				if appendSuccess {
@@ -398,7 +400,9 @@ func handleConnection(c net.Conn) {
 					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm, resSuccess)
 			}
 			if term > common.CurrentTerm {
-				log.Printf("Update current term %d->%d and become follower\n", common.CurrentTerm, term)
+				if tog.LogLevel(tog.WARN) {
+					log.Printf("Update current term %d->%d and become follower\n", common.CurrentTerm, term)
+				}
 				common.ChangeTerm(term)
 				common.ChangeRole(common.Follower)
 			}

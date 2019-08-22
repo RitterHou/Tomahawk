@@ -152,8 +152,8 @@ func UpdateLocalIp(conn net.Conn) {
 func sendData(n Node, data []byte) error {
 	_, err := n.Conn.Write(data)
 	if err != nil {
-		log.Println(err)
 		if tog.LogLevel(tog.WARN) {
+			log.Printf("Send data error: %v\n", err)
 			log.Printf("colse connection %s -> %s\n",
 				n.Conn.LocalAddr().String(), n.Conn.RemoteAddr().String())
 		}

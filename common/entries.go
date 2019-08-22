@@ -3,6 +3,7 @@
 package common
 
 import (
+	"../tog"
 	"log"
 	"sync"
 )
@@ -71,7 +72,9 @@ func SetEntry(entry Entry) {
 // 如果产生冲突，从当前节点进行裁剪
 func CutoffEntries(index uint32) {
 	if Role != Follower {
-		log.Println("只有follower才会被裁掉entries")
+		if tog.LogLevel(tog.WARN) {
+			log.Println("只有follower才会被裁掉entries")
+		}
 		return
 	}
 	logEntries = logEntries[:index]

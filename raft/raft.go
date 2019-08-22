@@ -76,8 +76,8 @@ func Run() {
 					}
 				}
 			case <-time.After(time.Duration(electionTimeout) * time.Millisecond): // 选举超时
-				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) this turn election failed, next turn election will start soon\n",
+				if tog.LogLevel(tog.WARN) {
+					log.Printf("%s(me) This turn election failed, next turn election will start soon\n",
 						common.LocalNodeId)
 				}
 			}

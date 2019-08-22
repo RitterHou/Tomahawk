@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const n = 1000
-
 type entry struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -29,6 +27,20 @@ func randomString(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+// 生成随机的中文汉字
+func randomChineseWords(num int) string {
+	randInt := func(min, max int64) int64 {
+		rand.Seed(time.Now().UnixNano())
+		return min + rand.Int63n(max-min)
+	}
+
+	words := make([]rune, num)
+	for i := range words {
+		words[i] = rune(randInt(19968, 40869))
+	}
+	return string(words)
 }
 
 // POST JSON data
@@ -61,11 +73,19 @@ func postJSON(url string, data []byte) string {
 }
 
 func main() {
-	entries := make([]entry, n)
-	for i := 0; i < n; i++ {
+	entries := make([]entry, 0)
+	entries = append(entries, entry{Key: "😊😊😊", Value: "😁😁😁😁😁😆😆😆😆😆"})
+
+	for i := 0; i < 1000; i++ {
 		key := randomString(10)
 		value := randomString(15)
-		entries[i] = entry{Key: key, Value: value}
+		entries = append(entries, entry{Key: key, Value: value})
+	}
+
+	for i := 0; i < 200; i++ {
+		key := randomChineseWords(5)
+		value := randomChineseWords(12)
+		entries = append(entries, entry{Key: key, Value: value})
 	}
 
 	data, err := json.Marshal(entries)

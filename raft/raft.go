@@ -15,11 +15,11 @@ func Run() {
 		case common.Follower:
 			heartbeatTimeout := common.RandomInt(common.HeartbeatTimeoutMin, common.HeartbeatTimeoutMax)
 			select {
-			case <-common.HeartbeatTimeoutCh:
+			case <-common.HeartbeatTimeoutCh: // 收到了心跳
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
 				}
-			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
+			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond): // 没能收到心跳，超时
 				// 更新为候选人
 				common.ChangeRole(common.Candidate)
 				if tog.LogLevel(tog.DEBUG) {
@@ -50,7 +50,7 @@ func Run() {
 			electionTimeout := common.RandomInt(common.ElectionTimeoutMin, common.ElectionTimeoutMax)
 			select {
 			case success := <-common.VoteSuccessCh:
-				if success {
+				if success { // 选举成功
 					common.ChangeRole(common.Leader)
 					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
@@ -69,13 +69,13 @@ func Run() {
 					// 选举成功立即发送心跳，防止follower再次超时
 					// common.LeaderSendEntryCh <- true, leader在这个周期再超时一次也没有关系
 					node.SendAppendEntries()
-				} else {
+				} else { // 选举失败
 					common.ChangeRole(common.Follower)
 					if tog.LogLevel(tog.DEBUG) {
 						log.Printf("%s(me) Vote failed and becmoe follower\n", common.LocalNodeId)
 					}
 				}
-			case <-time.After(time.Duration(electionTimeout) * time.Millisecond):
+			case <-time.After(time.Duration(electionTimeout) * time.Millisecond): // 选举超时
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) this turn election failed, next turn election will start soon\n",
 						common.LocalNodeId)
@@ -83,11 +83,11 @@ func Run() {
 			}
 		case common.Leader:
 			select {
-			case <-common.LeaderSendEntryCh:
+			case <-common.LeaderSendEntryCh: // 发送了心跳
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) leader has sent data to followers\n", common.LocalNodeId)
 				}
-			case <-time.After(common.LeaderCycleTimeout * time.Millisecond):
+			case <-time.After(common.LeaderCycleTimeout * time.Millisecond): // 未发送心跳导致超时
 				if tog.LogLevel(tog.DEBUG) {
 					log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}

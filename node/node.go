@@ -16,6 +16,7 @@ import (
 // 节点列表
 var nodes sync.Map
 
+// 添加一个节点，如果节点已经存在则会替换
 func AddNode(node Node) {
 	if node.NodeId == "" {
 		log.Fatal("node id can't be none")
@@ -29,12 +30,14 @@ func AddNode(node Node) {
 	nodes.Store(node.NodeId, node)
 }
 
+// 更新matchIndex
 func UpdateMatchIndex(nodeId string) {
 	n := GetNode(nodeId)
 	n.MatchIndex = n.NextIndex
 	nodes.Store(nodeId, n)
 }
 
+// 更新指定节点的nextIndex
 func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 	if nodeId == common.LocalNodeId {
 		// 只更新follower
@@ -49,6 +52,7 @@ func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 	nodes.Store(nodeId, n)
 }
 
+// 移除一个节点
 func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
@@ -70,6 +74,7 @@ func RemoveNodeById(nodeId string) {
 	}
 }
 
+// 判断指定节点是否存在
 func ExistNode(nodeId string) bool {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
@@ -78,6 +83,7 @@ func ExistNode(nodeId string) bool {
 	return ok
 }
 
+// 获取指定节点
 func GetNode(nodeId string) Node {
 	if nodeId == "" {
 		log.Fatal("node id can't be none")
@@ -99,6 +105,7 @@ func (l TheNodeList) Less(i, j int) bool {
 	return l[j].NodeId > l[i].NodeId
 }
 
+// 获取所有节点
 func GetNodes() TheNodeList {
 	n := make([]Node, 0)
 	nodes.Range(func(key, value interface{}) bool {
@@ -174,7 +181,7 @@ func SendDataToFollowers(nodes []Node, data []byte) {
 	}
 }
 
-// 发送entries信息给follower
+// 发送entries信息给follower，即AppendEntries操作
 func SendAppendEntries() {
 	replicatedNum := uint32(1) // 记录已经成功复制的follower
 

@@ -52,7 +52,7 @@ func Run() {
 			case success := <-common.VoteSuccessCh:
 				if success { // 选举成功
 					common.ChangeRole(common.Leader)
-					if tog.LogLevel(tog.DEBUG) {
+					if tog.LogLevel(tog.INFO) {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
 					}
 
@@ -71,7 +71,7 @@ func Run() {
 					node.SendAppendEntries()
 				} else { // 选举失败
 					common.ChangeRole(common.Follower)
-					if tog.LogLevel(tog.DEBUG) {
+					if tog.LogLevel(tog.WARN) {
 						log.Printf("%s(me) Vote failed and becmoe follower\n", common.LocalNodeId)
 					}
 				}

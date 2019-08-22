@@ -53,13 +53,15 @@ func root(w http.ResponseWriter, r *http.Request) {
 
 // 显示节点信息
 func nodes(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if r.Method != http.MethodGet {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		sendResponse(w, "Only allow method [GET].")
 		return
 	}
 
-	sendResponse(w, "       NodeId      Host\n")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	table := ""
+
 	nodes := node.GetNodes()
 	sort.Sort(nodes) // 对节点列表进行排序
 	for _, n := range nodes {
@@ -71,8 +73,9 @@ func nodes(w http.ResponseWriter, r *http.Request) {
 		if n.NodeId == common.LocalNodeId {
 			me = "▴"
 		}
-		sendResponse(w, fmt.Sprintf("%s%s %10s %15s:%-5d\n", star, me, n.NodeId, n.Ip, n.HTTPPort))
+		table += fmt.Sprintf(common.NodePageTableTemplate, star, me, n.NodeId, n.Ip, n.HTTPPort)
 	}
+	sendResponse(w, fmt.Sprintf(common.NodesPage, strings.Replace(table, " ", "&nbsp;", -1)))
 }
 
 // 读写数据
@@ -98,7 +101,7 @@ func handlerEntries(w http.ResponseWriter, r *http.Request) {
 		// key不为空，返回指定数据
 		value, ok := common.GetEntryByKey(key)
 		if ok {
-			sendResponse(w, fmt.Sprintf(`{"%s": "%s"}`, key, value))
+			sendResponse(w, fmt.Sprintf(`Result for key [%s]: {"%s": "%s"}`, key, key, value))
 		} else {
 			w.WriteHeader(http.StatusNotFound) // 没找到相应的key
 			sendResponse(w, fmt.Sprintf("can't found key [%s]", key))
@@ -262,7 +265,11 @@ func getFromAndSize(fromStr, sizeStr string, entriesLength int) (from, size int)
 		from = 0
 	}
 
-	if size > entriesLength || size < 0 {
+	if size > entriesLength {
+		size = entriesLength
+	}
+
+	if size < 0 {
 		size = 10
 	}
 

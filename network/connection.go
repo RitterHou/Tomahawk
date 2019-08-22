@@ -103,7 +103,10 @@ func handleConnection(c net.Conn) {
 	// 读取一个字节
 	readByte := func() (byte, bool) {
 		buf, success := readBytes(1)
-		return buf[0], success
+		if !success {
+			return 0, false
+		}
+		return buf[0], true
 	}
 
 	// 读取一个字符串

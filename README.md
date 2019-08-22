@@ -29,24 +29,30 @@ Parameters
 | quorum | quorum means most, using for election, default is 1 |
 | hosts | seed hosts with other nodes, default is \[\] |
 
-Save data on the leader node
+Save data
 
     curl --header "Content-Type: application/json" \
          --request POST \
          --data '{"key": "city", "value": "Nanjing"}' \
          http://localhost:6200/entries
          
-or saving datas
+or datas
 
     curl --header "Content-Type: application/json" \
          --request POST \
          --data '[{"key": "city", "value": "Nanjing"}, {"key": "province", "value": "Jiangsu"}]' \
          http://localhost:6200/entries
          
-Query data on every node by key
+Query data
 
     curl -X GET 'http://localhost:6202/entries?key=city'
     
 Show nodes info
 
     curl -X GET 'http://localhost:6202/nodes'
+    
+### TODO
+
+- [ ] Data persistence
+- [ ] Data compression and snapshot creation
+- [ ] More tests for special situations

@@ -17,7 +17,7 @@ func Run() {
 			select {
 			case <-common.HeartbeatTimeoutCh:
 				if tog.LogLevel(tog.DEBUG) {
-					//log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
+					log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
 				}
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond):
 				// 更新为候选人
@@ -89,7 +89,7 @@ func Run() {
 				}
 			case <-time.After(common.LeaderCycleTimeout * time.Millisecond):
 				if tog.LogLevel(tog.DEBUG) {
-					//log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
+					log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
 				node.SendAppendEntries()

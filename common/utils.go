@@ -1,3 +1,5 @@
+// 工具
+
 package common
 
 import (
@@ -6,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"sync"
 	"time"
 )
 
@@ -27,13 +28,14 @@ func RandomString(n int) string {
 	return string(b)
 }
 
+// 将一个uint32的数字转化为字节数组
 func Uint32ToBytes(num uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, num)
 	return buf
 }
 
-// 数据数据包进行编码，加上头部信息
+// 对数据包进行编码，加上头部信息
 func AddBufHead(buf []byte) []byte {
 	length := len(buf)
 	head := make([]byte, 0, 1)
@@ -45,23 +47,6 @@ func AddBufHead(buf []byte) []byte {
 	}
 	body := append(head, buf...)
 	return body
-}
-
-// 从一段被编码的数据中解析出数据包，即 AddBufHead 的逆操作
-// 返回值：解析出来的报文，被解析数据的完整长度
-func ParseBuf(buf []byte) ([]byte, uint32) {
-	offset := uint32(1)
-	head := buf[0]
-	if head < 0xff {
-		offset += uint32(head)
-		body := buf[1 : 1+head]
-		return body, offset
-	} else {
-		length := binary.LittleEndian.Uint32(buf[1:])
-		offset = offset + 4 + length
-		body := buf[5 : 5+length]
-		return body, offset
-	}
 }
 
 // 获取本地的网卡IP地址（可能不准确，因为无法保证数据包一定是从这块网卡发出去的）
@@ -102,86 +87,6 @@ func GetLocalIp() string {
 	return ""
 }
 
-// 所有的数据
-var logEntries = []Entry{{Key: "", Value: "", Term: 0, Index: 0}} // 初始化一条数据可以简化一些操作
-var entryMutex sync.Mutex
-
-// 只有leader可以这样顺序的append entry数据
-func AppendEntryList(entryList []Entry) {
-	if Role != Leader {
-		log.Fatalf("Current node %s, and leader is %s, only leader can append entries",
-			LocalNodeId, LeaderNodeId)
-	}
-	entryMutex.Lock()
-	for i := 0; i < len(entryList); i++ {
-		entryList[i].Term = CurrentTerm
-		entryList[i].Index = GetEntriesLength() // Index自增
-		entryList[i].Time = MakeTimestamp()
-		logEntries = append(logEntries, entryList[i])
-	}
-	entryMutex.Unlock()
-}
-
-// 根据key获取entry
-func GetEntryByKey(key string) (string, bool) {
-	defer entryMutex.Unlock()
-	entryMutex.Lock()
-	for i := len(logEntries) - 1; i >= 0; i-- {
-		if logEntries[i].Key == key {
-			return logEntries[i].Value, true
-		}
-	}
-	return "", false
-}
-
-// 根据索引获取Entry
-func GetEntryByIndex(index uint32) Entry {
-	return logEntries[index]
-}
-
-// 获取当前Entries的长度
-func GetEntriesLength() uint32 {
-	return uint32(len(logEntries))
-}
-
-// 根据索引设置Entry
-func SetEntry(entry Entry) {
-	// 理论上来说，当前节点的entries最多只能比index低一位
-	if GetEntriesLength() == entry.Index {
-		logEntries = append(logEntries, entry)
-	} else {
-		logEntries[entry.Index] = entry
-	}
-}
-
-// 如果产生冲突，从当前节点进行裁剪
-func CutoffEntries(index uint32) {
-	if Role != Follower {
-		log.Println("只有follower才会被裁掉entries")
-		return
-	}
-	logEntries = logEntries[:index]
-}
-
-func GetEntries() []Entry {
-	return logEntries
-}
-
-func GetLastEntry() Entry {
-	return logEntries[len(logEntries)-1]
-}
-
-// 把entry编码为字节数组
-func EncodeEntry(entry Entry) []byte {
-	data := make([]byte, 0)
-	data = append(data, AddBufHead([]byte(entry.Key))...)
-	data = append(data, AddBufHead([]byte(entry.Value))...)
-	data = append(data, Uint32ToBytes(entry.Term)...)
-	data = append(data, Uint32ToBytes(entry.Index)...)
-	data = append(data, Uint32ToBytes(entry.Time)...)
-	return data
-}
-
 // 更新角色的状态
 func ChangeRole(role RoleType) {
 	if tog.LogLevel(tog.DEBUG) {
@@ -214,6 +119,7 @@ func ChangeTerm(term uint32) {
 	CurrentTerm = term
 }
 
+// 取出两个数中的较小值
 func Min(m, n uint32) uint32 {
 	if m < n {
 		return m
@@ -221,6 +127,7 @@ func Min(m, n uint32) uint32 {
 	return n
 }
 
+// 取出两个数中的较大值
 func Max(m, n uint32) uint32 {
 	if m < n {
 		return n
@@ -231,4 +138,24 @@ func Max(m, n uint32) uint32 {
 // 获取当前时间戳
 func MakeTimestamp() uint32 {
 	return uint32(time.Now().Unix())
+}
+
+// 根据网络传输类型获取相应的字符串，主要是为了打印好看
+func GetSocketDataType(socketType byte) string {
+	switch socketType {
+	case ExchangeNodeInfo:
+		return "ExchangeNodeInfo"
+	case ShareNodes:
+		return "ShareNodes"
+	case AppendEntries:
+		return "AppendEntries"
+	case AppendEntriesResponse:
+		return "AppendEntriesResponse"
+	case VoteRequest:
+		return "VoteRequest"
+	case VoteResponse:
+		return "VoteResponse"
+	default:
+		return "Unknown Socket Type"
+	}
 }

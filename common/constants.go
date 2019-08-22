@@ -1,3 +1,5 @@
+// 保存了一些常量
+
 package common
 
 import (
@@ -33,7 +35,7 @@ const NotFoundHtml = `<!doctype html>
 <head>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<meta charset="utf-8">
-	<title>Oops, 404 page not found</title>
+	<title>404</title>
 </head>
 <body>
 	<div style="font-family: Georgia; font-size: 35px; margin-bottom: 20px;">Oops! 404 page not found</div>

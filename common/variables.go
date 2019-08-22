@@ -1,12 +1,14 @@
+// 保存了一些变量
+
 package common
 
 var (
-	BuildStamp string
-	Version    string
-	GoVersion  string
+	BuildStamp string // 可执行文件的编译时间
+	Version    string // 可执行文件的版本
+	GoVersion  string // 编译可执行文件的golang编译器版本
 )
 
-// 数组类型的flag
+// 数组类型的flag，该类型是为了保存多个seed hosts
 type arrayFlag []string
 
 func (flag *arrayFlag) String() string {
@@ -37,29 +39,10 @@ const (
 	VoteResponse                      // 投票的响应
 )
 
-// 根据网络传输类型获取相应的字符串
-func GetSocketDataType(socketType byte) string {
-	switch socketType {
-	case ExchangeNodeInfo:
-		return "ExchangeNodeInfo"
-	case ShareNodes:
-		return "ShareNodes"
-	case AppendEntries:
-		return "AppendEntries"
-	case AppendEntriesResponse:
-		return "AppendEntriesResponse"
-	case VoteRequest:
-		return "VoteRequest"
-	case VoteResponse:
-		return "VoteResponse"
-	default:
-		return "Unknown Socket Type"
-	}
-}
-
 // 定义一个表示角色的类型
 type RoleType byte
 
+// 为了打印角色时显示的更加直观
 func (t RoleType) String() string {
 	switch t {
 	case Follower:
@@ -76,19 +59,19 @@ func (t RoleType) String() string {
 // 当前的角色类型
 var Role = Follower
 
-// 节点类型
+// 所有的角色类型
 const (
-	Follower RoleType = iota
-	Candidate
-	Leader
+	Follower  RoleType = iota // 跟随者
+	Candidate                 // 候选人
+	Leader                    // 领导人
 )
 
-// 选举相关的一些数据
+// 一些用于协程间同步的channel
 var (
-	HeartbeatTimeoutCh  = make(chan bool, 1) // 当前节点心跳超时的channel，用于刷新心跳超时时间
+	HeartbeatTimeoutCh  = make(chan bool, 1) // 当前节点心跳超时的channel，表示此周期内已经接收到了心跳，follower不需要超时
 	VoteSuccessCh       = make(chan bool, 1) // 选举情况channel，表示选举成功还是失败、或者超时
-	LeaderSendEntryCh   = make(chan bool, 1) // leader发送了信息的channel，意味着在这个周期内不再需要主动发送心跳
-	LeaderAppendSuccess = make(chan bool, 1) // leader复制entries给大部分的follower操作成功
+	LeaderSendEntryCh   = make(chan bool, 1) // leader发送了信息的channel，意味着在这个周期内leader不再需要主动发送心跳
+	LeaderAppendSuccess = make(chan bool, 1) // leader复制entries给大部分的follower操作成功，此时leader可以返回给客户端
 )
 
 const (
@@ -102,24 +85,12 @@ const (
 
 var (
 	CurrentTerm uint32 = 0 // 当前任期
-	Votes       uint32 = 0 // 获取选票数
+	Votes       uint32 = 0 // 作为Candidate所获取的选票数
 )
 
-// leader节点的id
-var LeaderNodeId string
-
-// 投票信息 key为term，value为nodeId
-var VoteFor = make(map[uint32]string)
-
-// 一条数据
-type Entry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-	Term  uint32 // 添加该条数据时的任期号
-	Index uint32 // 在log中的索引
-	Time  uint32 // 创建时间
-}
-
-// 已经提交的entry索引
-var CommittedIndex = uint32(0)
-var AppliedIndex = uint32(0)
+var (
+	LeaderNodeId   string                    // leader节点的id
+	VoteFor        = make(map[uint32]string) // 投票信息 key为term，value为nodeId，表示在这个任期内投给了谁，可以避免重复投票
+	CommittedIndex = uint32(0)               // 已经提交的entry索引
+	AppliedIndex   = uint32(0)
+)

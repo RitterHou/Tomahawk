@@ -70,27 +70,14 @@ func handleConnection(c net.Conn) {
 		}
 	}()
 
-	localNodeIdBuf := common.AddBufHead([]byte(common.LocalNodeId))
-	portBuf := common.Uint32ToBytes(uint32(common.Port))
-	httpPortBuf := common.Uint32ToBytes(uint32(common.HTTPPort))
-
-	nodeInfo := []byte{common.ExchangeNodeInfo}    // 操作类型
-	nodeInfo = append(nodeInfo, localNodeIdBuf...) // 节点id
-	nodeInfo = append(nodeInfo, portBuf...)        // TCP服务端口
-	nodeInfo = append(nodeInfo, httpPortBuf...)    // HTTP服务端口
-
-	// 一旦与远程主机连接，立即告知其自己的节点信息
-	_, err := c.Write(nodeInfo)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
+	// 第一件事就是把当前节点的信息告知远程节点
+	sendNodeInfo(c)
 
 	// 记录此连接所对应的远程节点id，可以作为一个索引方便后续操作
 	var remoteNodeId string
 
 	// 对数据读取做了简单的封装
-	read := func(length uint32) ([]byte, bool) {
+	readBytes := func(length uint32) ([]byte, bool) {
 		data := make([]byte, length)
 		_, err := c.Read(data)
 		if err != nil {
@@ -113,44 +100,58 @@ func handleConnection(c net.Conn) {
 		return data, true
 	}
 
-	// 进一步包装数据的读取，包括了头部信息的解析
-	readBuf := func() ([]byte, bool) {
-		headBuf, success := read(1)
+	// 读取一个字节
+	readByte := func() (byte, bool) {
+		buf, success := readBytes(1)
+		return buf[0], success
+	}
+
+	// 读取一个字符串
+	readStr := func() ([]byte, bool) {
+		head, success := readByte()
 		if !success {
 			return nil, success
 		}
-		head := headBuf[0]
 		if head < 0xff {
-			body, success := read(uint32(head))
+			body, success := readBytes(uint32(head))
 			return body, success
 		} else {
-			lengthBuf, success := read(4)
+			lengthBuf, success := readBytes(4)
 			if !success {
 				return nil, success
 			}
 			length := binary.LittleEndian.Uint32(lengthBuf)
-			body, success := read(length)
+			body, success := readBytes(length)
 			return body, success
 		}
 	}
 
+	// 读取一个uint32数字
+	readUint32 := func() (uint32, bool) {
+		buf, success := readBytes(4)
+		if !success {
+			return 0, false
+		}
+		return binary.LittleEndian.Uint32(buf), true
+	}
+
 	// 读取远程主机发送的数据
 	for {
-		dataType, success := read(1)
+		dataType, success := readByte()
 		if !success {
 			return
 		}
 
-		socketDataType := common.GetSocketDataType(dataType[0])
+		socketDataType := common.GetSocketDataType(dataType)
 		readRemoteDataStart := time.Now().UnixNano()
 		if tog.LogLevel(tog.DEBUG) {
 			log.Printf("%s read data type: %v\n", common.LocalNodeId, socketDataType)
 		}
 
-		switch dataType[0] {
+		switch dataType {
 		case common.ExchangeNodeInfo:
 			// 节点ID
-			nodeIdBuf, success := readBuf()
+			nodeIdBuf, success := readStr()
 			if !success {
 				return
 			}
@@ -158,18 +159,17 @@ func handleConnection(c net.Conn) {
 			remoteNodeId = nodeId
 
 			// 端口号
-			remotePortBuf, success := read(4)
+			remotePortBuf, success := readBytes(4)
 			if !success {
 				return
 			}
 			remotePort := binary.LittleEndian.Uint32(remotePortBuf)
 
 			// HTTP端口号
-			remoteHTTPPortBuf, success := read(4)
+			remoteHTTPPort, success := readUint32()
 			if !success {
 				return
 			}
-			remoteHTTPPort := binary.LittleEndian.Uint32(remoteHTTPPortBuf)
 
 			// IP地址
 			remoteIp := strings.Split(c.RemoteAddr().String(), ":")[0]
@@ -217,23 +217,22 @@ func handleConnection(c net.Conn) {
 		case common.ShareNodes:
 			// 为什么不需要使用Gossip这样的算法呢，因为raft这样的系统一般不会直接存储海量的数据，而是存储一些meta
 			// 数据、或者作为另一个集群的master来使用，所以节点数量不会太多，因此不需要Gossip这样的节点间数据同步协议
-			nodeIdBuf, success := readBuf()
+			nodeIdBuf, success := readStr()
 			if !success {
 				return
 			}
 			nodeId := string(nodeIdBuf)
 
-			remoteIPBuf, success := readBuf()
+			remoteIPBuf, success := readStr()
 			if !success {
 				return
 			}
 			remoteIp := string(remoteIPBuf)
 
-			remotePortBuf, success := read(4)
+			remotePort, success := readUint32()
 			if !success {
 				return
 			}
-			remotePort := binary.LittleEndian.Uint32(remotePortBuf)
 
 			// 只有这个节点不存在于节点列表的时候才需要去连接
 			if !node.ExistNode(nodeId) {
@@ -243,34 +242,26 @@ func handleConnection(c net.Conn) {
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) Get AppendEntries from %s\n", common.LocalNodeId, remoteNodeId)
 			}
-			leaderTermBuf, success := read(4)
-			if !success {
-				return
-			}
 			// leader的任期
-			leaderTerm := binary.LittleEndian.Uint32(leaderTermBuf)
-
-			leaderPrevLogIndexBuf, success := read(4)
+			leaderTerm, success := readUint32()
 			if !success {
 				return
 			}
 			// leader所记录的当前follower的最后一个log索引
-			leaderPrevLogIndex := binary.LittleEndian.Uint32(leaderPrevLogIndexBuf)
-
-			leaderPrevLogTermBuf, success := read(4)
+			leaderPrevLogIndex, success := readUint32()
 			if !success {
 				return
 			}
 			// leader所记录的当前follower的最后一个log索引的任期
-			leaderPrevLogTerm := binary.LittleEndian.Uint32(leaderPrevLogTermBuf)
-
-			leaderCommittedIndexBuf, success := read(4)
+			leaderPrevLogTerm, success := readUint32()
 			if !success {
 				return
 			}
 			// leader的commitIndex
-			leaderCommittedIndex := binary.LittleEndian.Uint32(leaderCommittedIndexBuf)
-
+			leaderCommittedIndex, success := readUint32()
+			if !success {
+				return
+			}
 			// leader的此次append是否成功
 			appendSuccess := true
 			if leaderTerm < common.CurrentTerm {
@@ -287,46 +278,41 @@ func handleConnection(c net.Conn) {
 				// 如果leader记录的当前节点index超出限制，也是一种不匹配
 				appendSuccess = false
 			}
-
-			appendEntriesLengthBuf, success := read(4)
+			// 此次AppendEntries的entries长度
+			appendEntriesLength, success := readUint32()
 			if !success {
 				return
 			}
-			// 此次AppendEntries的entries长度
-			appendEntriesLength := binary.LittleEndian.Uint32(appendEntriesLengthBuf)
 			// 遍历所有的entry
 			for i := uint32(0); i < appendEntriesLength; i++ {
-				keyBuf, success := readBuf()
+				keyBuf, success := readStr()
 				if !success {
 					return
 				}
 				key := string(keyBuf)
 
-				valueBuf, success := readBuf()
+				valueBuf, success := readStr()
 				if !success {
 					return
 				}
 				value := string(valueBuf)
 
-				termBuf, success := read(4)
-				if !success {
-					return
-				}
 				// 该Entry所对应的任期
-				term := binary.LittleEndian.Uint32(termBuf)
-
-				indexBuf, success := read(4)
+				term, success := readUint32()
 				if !success {
 					return
 				}
+
 				// 该Entry在log中的位置
-				index := binary.LittleEndian.Uint32(indexBuf)
-
-				timeBuf, success := read(4)
+				index, success := readUint32()
 				if !success {
 					return
 				}
-				createTime := binary.LittleEndian.Uint32(timeBuf)
+
+				createTime, success := readUint32()
+				if !success {
+					return
+				}
 
 				log.Printf("AppendEntries from leader, key: %s, value: %s, term: %d, index: %d\n",
 					key, value, term, index)
@@ -389,20 +375,19 @@ func handleConnection(c net.Conn) {
 				" entriesLength: %d, result: %v, resultTerm: %d\n", leaderPrevLogIndex, leaderPrevLogTerm,
 				leaderCommittedIndex, appendEntriesLength, appendSuccess, common.CurrentTerm)
 		case common.AppendEntriesResponse:
-			resSuccessBuf, success := read(1)
+			resSuccessBuf, success := readByte()
 			if !success {
 				return
 			}
 			resSuccess := true
-			if resSuccessBuf[0] == 0 {
+			if resSuccessBuf == 0 {
 				resSuccess = false
 			}
 
-			termBuf, success := read(4)
+			term, success := readUint32()
 			if !success {
 				return
 			}
-			term := binary.LittleEndian.Uint32(termBuf)
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s Get AppendEntriesResponse from %s, term: %d, local term: %d, success: %t\n",
 					common.LocalNodeId, remoteNodeId, term, common.CurrentTerm, resSuccess)
@@ -420,23 +405,20 @@ func handleConnection(c net.Conn) {
 				// 重置超时定时器
 				common.HeartbeatTimeoutCh <- true
 			}
-			candidateTermBuf, success := read(4)
+			candidateTerm, success := readUint32()
 			if !success {
 				return
 			}
-			candidateTerm := binary.LittleEndian.Uint32(candidateTermBuf)
 
-			lastEntryIndexBuf, success := read(4)
+			lastEntryIndex, success := readUint32()
 			if !success {
 				return
 			}
-			lastEntryIndex := binary.LittleEndian.Uint32(lastEntryIndexBuf)
 
-			lastEntryTermBuf, success := read(4)
+			lastEntryTerm, success := readUint32()
 			if !success {
 				return
 			}
-			lastEntryTerm := binary.LittleEndian.Uint32(lastEntryTermBuf)
 
 			if tog.LogLevel(tog.DEBUG) {
 				log.Printf("%s(me) term %d -> remote %s term %d ",
@@ -476,18 +458,17 @@ func handleConnection(c net.Conn) {
 				log.Fatal(err)
 			}
 		case common.VoteResponse:
-			voteBuf, success := read(1)
+			voteBuf, success := readByte()
 			if !success {
 				return
 			}
 
-			termBuf, success := read(4)
+			term, success := readUint32()
 			if !success {
 				return
 			}
-			term := binary.LittleEndian.Uint32(termBuf)
 
-			vote := voteBuf[0]
+			vote := voteBuf
 			if vote == 1 {
 				atomic.AddUint32(&common.Votes, 1)
 				if common.Votes >= common.Quorum {
@@ -507,5 +488,23 @@ func handleConnection(c net.Conn) {
 		if tog.LogLevel(tog.DEBUG) {
 			log.Printf("Cost %dms %dns, %s\n", readRemoteDataCost/1e6, readRemoteDataCost, socketDataType)
 		}
+	}
+}
+
+// 发送当前节点的信息给远程节点
+func sendNodeInfo(c net.Conn) {
+	localNodeIdBuf := common.AddBufHead([]byte(common.LocalNodeId))
+	portBuf := common.Uint32ToBytes(uint32(common.Port))
+	httpPortBuf := common.Uint32ToBytes(uint32(common.HTTPPort))
+
+	nodeInfo := []byte{common.ExchangeNodeInfo}    // 操作类型
+	nodeInfo = append(nodeInfo, localNodeIdBuf...) // 节点id
+	nodeInfo = append(nodeInfo, portBuf...)        // TCP服务端口
+	nodeInfo = append(nodeInfo, httpPortBuf...)    // HTTP服务端口
+
+	// 一旦与远程主机连接，立即告知其自己的节点信息
+	_, err := c.Write(nodeInfo)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

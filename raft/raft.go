@@ -17,13 +17,13 @@ func Run() {
 			select {
 			case <-common.HeartbeatTimeoutCh: // 收到了心跳
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) get heartbeat and reset timer\n", common.LocalNodeId)
+					log.Printf("%s(me) Get heartbeat from leader\n", common.LocalNodeId)
 				}
 			case <-time.After(time.Duration(heartbeatTimeout) * time.Millisecond): // 没能收到心跳，超时
 				// 更新为候选人
 				common.ChangeRole(common.Candidate)
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) heartbeat timeout and become candidate\n", common.LocalNodeId)
+					log.Printf("%s(me) Heartbeat timeout and become candidate\n", common.LocalNodeId)
 				}
 			}
 		case common.Candidate: // 最复杂 1.成为leader; 2.成为follower; 3.继续下一轮选举
@@ -85,11 +85,11 @@ func Run() {
 			select {
 			case <-common.LeaderSendEntryCh: // 发送了心跳
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) leader has sent data to followers\n", common.LocalNodeId)
+					log.Printf("%s(me) Leader has sent data to followers\n", common.LocalNodeId)
 				}
 			case <-time.After(common.LeaderCycleTimeout * time.Millisecond): // 未发送心跳导致超时
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
+					log.Printf("%s(me) Leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
 				node.SendAppendEntries()

@@ -13,7 +13,7 @@ Download the [releases](https://github.com/RitterHou/Tomahawk/releases/latest) f
 
 ### Launch
 
-Startup process with [tomahawk.conf](https://github.com/RitterHou/Tomahawk/blob/master/tools/tomahawk.conf)
+Startup process with [configuration file](https://github.com/RitterHou/Tomahawk/blob/master/tools/tomahawk.conf)
 
     ./Tomahawk -c tomahawk.conf
 
@@ -22,17 +22,21 @@ You can also pass params in command line if you don't like using configuration f
     ./Tomahawk --level info --port 6301 --http 6201 --id node_1 --quorum 2 \
     --hosts 127.0.0.1:6301,127.0.0.1:6302,127.0.0.1:6303
 
-However, you can use command line params and configuration file params at the same time, just remember the params from command line have higher priority than configuration file, this means the params you given in command line will override the values from the configuration file.
+However, you can use command line params and configuration file params at the same time. Just remember the params from command line have higher priority than configuration file, this means the params you given in command line will cover the values from the configuration file.
 
-    Command Line > Configuration File > Default Values
+    Priority: Command Line > Configuration File > Default Values
 
 Show help messages with
 
     ./Tomahawk -h
 
-[tomahawk.sh](https://github.com/RitterHou/Tomahawk/blob/master/tools/tomahawk.sh) is a convenient way to start and stop Tomahawk process
+A shell script has been provided for convenience, [tomahawk.sh](https://github.com/RitterHou/Tomahawk/blob/master/tools/tomahawk.sh) is a convenient way to start and stop Tomahawk daemon.  For example, you can start a daemon by `Tomahawk_linux_amd64` and params `-c tomahawk.conf --id node_1 --level info` with tomahawk.sh
 
     ./tomahawk.sh -f Tomahawk_linux_amd64 -p "-c tomahawk.conf --id node_1 --level info"
+    
+Show tomahawk.sh help messages with
+
+    ./tomahawk.sh -h
 
 ### Usage
 
@@ -43,7 +47,7 @@ Save data
          --data '{"key": "city", "value": "Nanjing"}' \
          http://localhost:6200/entries
          
-or data list
+or saving data list
 
     curl --header "Content-Type: application/json" \
          --request POST \

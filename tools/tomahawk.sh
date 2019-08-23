@@ -10,7 +10,9 @@ dir=$(dirname ${0})
 # 可执行文件工作所需要的参数
 params="-c tomahawk.conf"
 # 操作类型
-operation="start"
+operation=""
+
+pidFile="Tomahawk.pid"
 
 # 默认打印帮助信息
 if test $# -eq 0; then
@@ -24,7 +26,7 @@ while test $# -gt 0; do
         echo "Tomahawk shell"
         echo " "
         echo "arguments:"
-        echo "  start          start tomahawk daemon[default]"
+        echo "  start          start tomahawk daemon"
         echo "  stop           stop  tomahawk daemon"
         echo " "
         echo "options:"
@@ -93,6 +95,14 @@ done
 cd ${dir}
 
 if [[ "${operation}" = "start" ]]; then
+    # 如果进程已经被启动，则不需要再次启动
+    if [[ -e "${pidFile}" ]]; then
+        echo -n "Tomahawk daemon is running, process id: "
+        cat ${pidFile}
+        echo ""
+        exit 1
+    fi
+
     ./${file} ${params} >${log} 2>&1 &
     pid=$!
     sleep 1
@@ -109,10 +119,17 @@ if [[ "${operation}" = "start" ]]; then
         echo "log:    ${log}"
         echo "params: ${params}"
         echo "Start Tomahawk Success"
-        echo -n ${pid} > "Tomahawk.pid"
+        echo -n ${pid} > "${pidFile}"
     fi
-else
-    kill -9 `cat Tomahawk.pid`
-    rm "Tomahawk.pid"
+elif [[ "${operation}" = "stop" ]]; then
+    if [[ ! -e "${pidFile}" ]]; then
+        echo "Can't stop Tomahawk daemon because it's not running"
+        exit 1
+    fi
+
+    kill -9 `cat ${pidFile}`
+    rm "${pidFile}"
     echo "Stop Tomahawk Success"
+else
+    echo "No operation can be checked: [start, stop]"
 fi

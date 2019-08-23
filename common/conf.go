@@ -17,7 +17,7 @@ func InitParams() {
 		arg := args[i]
 		// 打印帮助信息
 		if arg == "-h" || arg == "--help" {
-			fmt.Print(helpInformation)
+			fmt.Printf(helpInformation, Version)
 			os.Exit(0)
 		}
 		// 从配置文件中取到配置信息并做修改

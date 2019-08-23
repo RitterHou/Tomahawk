@@ -18,12 +18,16 @@ while test $# -gt 0; do
     -h|--help)
         echo "Tomahawk shell"
         echo " "
+        echo "arguments:"
+        echo "  start          start tomahawk daemon"
+        echo "  stop           stop  tomahawk daemon"
+        echo " "
         echo "options:"
         echo "  -h, --help     show help messages"
-        echo "  -d, --dir      work director"
-        echo "  -f, --file     tomahawk executable file name"
-        echo "  -l, --log      specify a log file"
-        echo "  -p, --params   tomahawk running params"
+        echo "  -d, --dir      working director, default is shell file director"
+        echo "  -f, --file     tomahawk executable file name, default is Tomahawk"
+        echo "  -l, --log      specify a log file, default is Tomahawk.log"
+        echo "  -p, --params   tomahawk running params, default is \"-c tomahawk.conf\""
         exit 0
         ;;
     -d|--dir)

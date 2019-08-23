@@ -29,7 +29,7 @@ while test $# -gt 0; do
         echo " "
         echo "options:"
         echo "  -h, --help     show help messages"
-        echo "  -d, --dir      working director, default is shell file director"
+        echo "  -d, --dir      working director, default is shell script director"
         echo "  -f, --file     tomahawk executable file name, default is Tomahawk"
         echo "  -l, --log      specify a log file, default is Tomahawk.log"
         echo "  -p, --params   tomahawk running params, default is \"-c tomahawk.conf\""

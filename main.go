@@ -40,7 +40,7 @@ func init() {
 		log.Printf("Node Id:    %s\n", common.LocalNodeId)
 		log.Printf("TCP Port:   %d\n", common.Port)
 		log.Printf("HTTP Port:  %d\n", common.HTTPPort)
-		log.Printf("Seed Hosts: %v", common.Hosts)
+		log.Printf("Seed Hosts: %v\n", common.Hosts)
 		log.Printf("Quorum:     %d\n", common.Quorum)
 		log.Printf("LogLevel:   %s\n", common.LogLevel)
 	}

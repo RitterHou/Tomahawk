@@ -12,6 +12,11 @@ params="-c tomahawk.conf"
 # 操作类型
 operation="start"
 
+# 默认打印帮助信息
+if test $# -eq 0; then
+    set -- "-h"
+fi
+
 # 循环获取参数信息
 while test $# -gt 0; do
     case "$1" in
@@ -19,7 +24,7 @@ while test $# -gt 0; do
         echo "Tomahawk shell"
         echo " "
         echo "arguments:"
-        echo "  start          start tomahawk daemon"
+        echo "  start          start tomahawk daemon[default]"
         echo "  stop           stop  tomahawk daemon"
         echo " "
         echo "options:"

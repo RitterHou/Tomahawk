@@ -4,11 +4,15 @@ case $1 in
 
 # 编译指定的平台
 --cross|-c)
+    latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+    flags="-s -w -X 'main.buildStamp=$(date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
+    echo "Build flags: ${flags}"
+
     IFS=':' read -ra p <<< "$2"
     os=${p[0]}
     arch=${p[1]}
     # 执行编译
-    CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} go build -o Tomahawk_${os}_${arch}
+    CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} go build -ldflags "$flags" -o Tomahawk_${os}_${arch}
     echo Tomahawk_${os}_${arch}
     ;;
 

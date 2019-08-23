@@ -8,25 +8,14 @@ var (
 	GoVersion  string // 编译可执行文件的golang编译器版本
 )
 
-// 数组类型的flag，该类型是为了保存多个seed hosts
-type arrayFlag []string
-
-func (flag *arrayFlag) String() string {
-	return ""
-}
-
-func (flag *arrayFlag) Set(value string) error {
-	*flag = append(*flag, value)
-	return nil
-}
-
-// 当前节点的一些参数信息
+// 当前节点的一些参数信息，声明时都附带了默认值
 var (
-	LocalNodeId string    // 当前节点id
-	Port        uint      // 监听的端口
-	HTTPPort    uint      // HTTP服务监听的端口
-	Hosts       arrayFlag // 种子节点
-	Quorum      uint32    // 所谓的“大多数”
+	LocalNodeId        = RandomString(10)  // 当前节点id
+	Port        uint   = 6300              // 监听的TCP端口
+	HTTPPort    uint   = 6200              // HTTP服务监听的端口
+	Hosts              = make([]string, 0) // 种子节点
+	Quorum      uint32 = 1                 // 投票时所需要的法定人数
+	LogLevel           = "debug"           // 日志等级
 )
 
 // 网络传输的数据类型

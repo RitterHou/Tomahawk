@@ -7,7 +7,6 @@ import (
 	"./node"
 	"./raft"
 	"./tog"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -17,8 +16,6 @@ var (
 	buildStamp = ""
 	version    = ""
 	goVersion  = ""
-	logLevel   = ""
-	quorum     uint
 )
 
 func init() {
@@ -36,16 +33,17 @@ func init() {
 	common.Version = version
 	common.GoVersion = goVersion
 
-	flag.UintVar(&common.Port, "port", 6300, "Bind port")                         // 绑定的TCP端口
-	flag.UintVar(&common.HTTPPort, "http", 6200, "HTTP server bind port")         // 绑定的HTTP端口
-	flag.StringVar(&common.LocalNodeId, "id", common.RandomString(10), "Node id") // 当前节点ID
-	flag.Var(&common.Hosts, "hosts", "Seed hosts")                                // 种子节点的host
-	flag.UintVar(&quorum, "quorum", 1, "As we know, most of the nodes")           // 投票时所需要的法定人数
-	flag.StringVar(&logLevel, "level", "debug", "Log level")                      // 日志等级
-	flag.Parse()
+	common.InitParams()       // 初始化参数信息
+	tog.Init(common.LogLevel) // 初始化日志设置
 
-	common.Quorum = uint32(quorum) // flag不支持uint32类型
-	tog.Init(logLevel)             // 初始化日志设置
+	if tog.LogLevel(tog.DEBUG) {
+		log.Printf("Node Id:    %s\n", common.LocalNodeId)
+		log.Printf("TCP Port:   %d\n", common.Port)
+		log.Printf("HTTP Port:  %d\n", common.HTTPPort)
+		log.Printf("Seed Hosts: %v", common.Hosts)
+		log.Printf("Quorum:     %d\n", common.Quorum)
+		log.Printf("LogLevel:   %s\n", common.LogLevel)
+	}
 }
 
 func main() {

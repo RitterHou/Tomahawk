@@ -47,10 +47,6 @@ func init() {
 }
 
 func main() {
-	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("Host seeds %v\n", common.Hosts)
-	}
-
 	// 把自己加入到节点列表中
 	node.AddNode(node.Node{
 		NodeId:   common.LocalNodeId,

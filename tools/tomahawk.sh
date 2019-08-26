@@ -134,6 +134,7 @@ elif [[ "${operation}" = "stop" ]]; then
     then
         echo -n "Pid is not running: "
         cat ${pidFile}
+        echo ""
         exit 1
     fi
 

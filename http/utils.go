@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // 对发送响应的行为做了封装
@@ -124,4 +125,28 @@ func getMemoryInfo() (uint64, uint64, uint64, uint32) {
 // 获取当前进程Goroutine的数量
 func getGoroutineNum() int {
 	return runtime.NumGoroutine()
+}
+
+// 将时间戳格式化
+func timestampFormat(t uint32) string {
+	return time.Unix(int64(t), 0).Format("2006-01-02 15:04:05")
+}
+
+// 将秒转化为可读的时间
+func secondToHumanReadable(second uint32) (result string) {
+	for {
+		if second > 60*60*24 {
+			result += fmt.Sprintf("%dd", second/60*60*24)
+			second %= 60 * 60 * 24
+		} else if second > 60*60 {
+			result += fmt.Sprintf("%dh", second/60*60)
+			second %= 60 * 60
+		} else if second > 60 {
+			result += fmt.Sprintf("%dm", second/60)
+			second %= 60
+		} else if second > 0 {
+			result += fmt.Sprintf("%ds", second)
+			return
+		}
+	}
 }

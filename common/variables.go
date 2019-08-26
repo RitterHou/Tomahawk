@@ -8,6 +8,9 @@ var (
 	GoVersion  string // 编译可执行文件的golang编译器版本
 )
 
+// 进程启动的时间戳
+var StartingTimeStamp uint32
+
 // 当前节点的一些参数信息，声明时都附带了默认值
 var (
 	LocalNodeId        = RandomString(10)  // 当前节点id

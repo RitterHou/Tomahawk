@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 )
 
 // 启动HTTP服务器
@@ -90,8 +89,7 @@ func handlerEntries(w http.ResponseWriter, r *http.Request) {
 			sendResponse(w, fmt.Sprintf("Total entries: %d, from: %d, size: %d\n", len(entries), from, size))
 			for _, entry := range entries[from : from+size] {
 				sendResponse(w, fmt.Sprintf(`{"key": "%s", "value": "%s", "index": "%d", "term": "%d", "time": "%s"}`+"\n",
-					entry.Key, entry.Value, entry.Index, entry.Term,
-					time.Unix(int64(entry.Time), 0).Format("2006-01-02 15:04:05")))
+					entry.Key, entry.Value, entry.Index, entry.Term, timestampFormat(entry.Time)))
 			}
 			return
 		}
@@ -207,8 +205,13 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendResponse(w, fmt.Sprintf("Goroutines: %d\n", getGoroutineNum()))
+	// goroutine的数量
+	sendResponse(w, fmt.Sprintf("Goroutines:\t%d\n", getGoroutineNum()))
+	// 内存信息
 	alloc, totalAlloc, s, gc := getMemoryInfo()
 	sendResponse(w, fmt.Sprintf("Memory:\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
 		alloc, totalAlloc, s, gc))
+	// 进程启动时间
+	sendResponse(w, fmt.Sprintf("Start:\t%sRuntime:\t%s\n", timestampFormat(common.StartingTimeStamp),
+		secondToHumanReadable(common.MakeTimestamp()-common.StartingTimeStamp)))
 }

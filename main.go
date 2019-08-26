@@ -28,6 +28,9 @@ func init() {
 		os.Exit(0)
 	}
 
+	// 记录下进程启动的时间戳
+	common.StartingTimeStamp = common.MakeTimestamp()
+
 	// 保存信息
 	common.BuildStamp = buildStamp
 	common.Version = version

@@ -207,6 +207,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sendResponse(w, fmt.Sprintf("Goroutines: %d\n", getGoroutineNum()))
 	alloc, totalAlloc, s, gc := getMemoryInfo()
 	sendResponse(w, fmt.Sprintf("Memory:\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
 		alloc, totalAlloc, s, gc))

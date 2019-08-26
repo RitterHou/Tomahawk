@@ -120,3 +120,8 @@ func getMemoryInfo() (uint64, uint64, uint64, uint32) {
 	runtime.ReadMemStats(&m)
 	return bToMb(m.Alloc), bToMb(m.TotalAlloc), bToMb(m.Sys), m.NumGC
 }
+
+// 获取当前进程Goroutine的数量
+func getGoroutineNum() int {
+	return runtime.NumGoroutine()
+}

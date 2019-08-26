@@ -209,9 +209,9 @@ func status(w http.ResponseWriter, r *http.Request) {
 	sendResponse(w, fmt.Sprintf("Goroutines:\t%d\n", getGoroutineNum()))
 	// 内存信息
 	alloc, totalAlloc, s, gc := getMemoryInfo()
-	sendResponse(w, fmt.Sprintf("Memory:\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
+	sendResponse(w, fmt.Sprintf("Memory:\t\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
 		alloc, totalAlloc, s, gc))
 	// 进程启动时间
-	sendResponse(w, fmt.Sprintf("Start:\t%s\nRuntime:\t%s\n", timestampFormat(common.StartingTimeStamp),
+	sendResponse(w, fmt.Sprintf("Start:\t\t%s\nRuntime:\t%s\n", timestampFormat(common.StartingTimeStamp),
 		secondToHumanReadable(common.MakeTimestamp()-common.StartingTimeStamp)))
 }

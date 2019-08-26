@@ -134,17 +134,23 @@ func timestampFormat(t uint32) string {
 
 // 将秒转化为可读的时间
 func secondToHumanReadable(second uint32) (result string) {
+	var (
+		day    = uint32(60 * 60 * 24)
+		hour   = uint32(60 * 60)
+		minute = uint32(60)
+	)
+
 	for {
-		if second > 60*60*24 {
-			result += fmt.Sprintf("%dd", second/60*60*24)
-			second %= 60 * 60 * 24
-		} else if second > 60*60 {
-			result += fmt.Sprintf("%dh", second/60*60)
-			second %= 60 * 60
-		} else if second > 60 {
-			result += fmt.Sprintf("%dm", second/60)
-			second %= 60
-		} else if second > 0 {
+		if second >= day {
+			result += fmt.Sprintf("%dd", second/day)
+			second %= day
+		} else if second >= hour {
+			result += fmt.Sprintf("%dh", second/hour)
+			second %= hour
+		} else if second >= minute {
+			result += fmt.Sprintf("%dm", second/minute)
+			second %= minute
+		} else {
 			result += fmt.Sprintf("%ds", second)
 			return
 		}

@@ -113,12 +113,14 @@ func handlerEntries(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if r.Body == nil {
-			http.Error(w, "Please send a request body", 400)
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
 			return
 		}
 		bodyBuf, err := ioutil.ReadAll(r.Body) // 获取HTTP请求的body
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		// 仅可以向leader写数据
@@ -134,7 +136,7 @@ func handlerEntries(w http.ResponseWriter, r *http.Request) {
 			var entry common.Entry
 			err := json.Unmarshal(bodyBuf, &entry) // 如果数组解析失败，则解析JSON对象
 			if err != nil {
-				http.Error(w, "Post body can't be decode to json: "+string(bodyBuf), 400)
+				http.Error(w, "Post body can't be decode to json: "+string(bodyBuf), http.StatusBadRequest)
 				return
 			}
 			entries = make([]common.Entry, 1)
@@ -179,7 +181,8 @@ func rikka(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	_, err := w.Write(common.Rikka)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -193,7 +196,8 @@ func favicon(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", common.IconLength)
 	_, err := w.Write(common.Icon)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -202,7 +206,8 @@ func sendResponse(w http.ResponseWriter, content string) {
 	_, err := fmt.Fprint(w, content)
 	if err != nil {
 		log.Printf("%v", debug.Stack())
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -215,42 +220,47 @@ func forwardPostDataToLeader(w http.ResponseWriter, bodyBuf []byte) {
 		}
 	}
 	// 进行entries转发，因为当前节点不是leader，把entries转发到leader节点上去
-	status, header, body := postJson(leaderUrl, bodyBuf)
+	status, header, body, err := postJson(leaderUrl, bodyBuf)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(status)
 	for k, v := range header {
-		w.Header().Set(k, strings.Join(v, " ")) // TODO 此时是直接把多个value进行合并的，不清楚是否合适
+		w.Header().Set(k, strings.Join(v, ", ")) // TODO 此时是直接把多个value进行合并的，不清楚是否合适
 	}
-	_, err := w.Write(body)
+	_, err = w.Write(body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 // POST JSON data
-func postJson(url string, data []byte) (int, http.Header, []byte) {
+func postJson(url string, data []byte) (int, http.Header, []byte, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
-		log.Fatal(err)
+		return 0, nil, nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return 0, nil, nil, err
 	}
-	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return 0, nil, nil, err
 	}
-	return res.StatusCode, res.Header, body
+
+	err = res.Body.Close()
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return res.StatusCode, res.Header, body, nil
 }
 
 // 解析得到合适的from和size属性的值

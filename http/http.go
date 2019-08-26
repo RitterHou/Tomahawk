@@ -4,15 +4,12 @@ import (
 	"../common"
 	"../node"
 	"../tog"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"runtime/debug"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +21,7 @@ func StartHttpServer(port uint) {
 	http.HandleFunc("/entries", handlerEntries) // 读写entries
 	http.HandleFunc("/rikka", rikka)            // rikka图片
 	http.HandleFunc("/favicon.ico", favicon)    // favicon.ico
+	http.HandleFunc("/status", status)          // 获取节点的状态信息
 
 	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
@@ -201,94 +199,15 @@ func favicon(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// 对发送响应的行为做了封装
-func sendResponse(w http.ResponseWriter, content string) {
-	_, err := fmt.Fprint(w, content)
-	if err != nil {
-		log.Printf("%v", debug.Stack())
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// 因为当前节点是follower，所以将数据转发给leader
-func forwardPostDataToLeader(w http.ResponseWriter, bodyBuf []byte) {
-	leaderUrl := ""
-	for _, n := range node.GetNodes() {
-		if n.NodeId == common.LeaderNodeId {
-			leaderUrl = fmt.Sprintf("http://%s:%d/entries", n.Ip, n.HTTPPort)
-		}
-	}
-	// 进行entries转发，因为当前节点不是leader，把entries转发到leader节点上去
-	status, header, body, err := postJson(leaderUrl, bodyBuf)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 获取节点的状态信息
+func status(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if r.Method != http.MethodGet {
+		sendResponse(w, "Only allow method [GET].")
 		return
 	}
-	w.WriteHeader(status)
-	for k, v := range header {
-		w.Header().Set(k, strings.Join(v, ", ")) // TODO 此时是直接把多个value进行合并的，不清楚是否合适
-	}
-	_, err = w.Write(body)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
-// POST JSON data
-func postJson(url string, data []byte) (int, http.Header, []byte, error) {
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
-	if err != nil {
-		return 0, nil, nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return 0, nil, nil, err
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return 0, nil, nil, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return 0, nil, nil, err
-	}
-	return res.StatusCode, res.Header, body, nil
-}
-
-// 解析得到合适的from和size属性的值
-func getFromAndSize(fromStr, sizeStr string, entriesLength int) (from, size int) {
-	var err error
-	from, err = strconv.Atoi(fromStr)
-	if err != nil {
-		from = 0
-	}
-	size, err = strconv.Atoi(sizeStr)
-	if err != nil {
-		size = 10
-	}
-
-	if from >= entriesLength || from < 0 {
-		from = 0
-	}
-
-	if size > entriesLength {
-		size = entriesLength
-	}
-
-	if size < 0 {
-		size = 10
-	}
-
-	if from+size > entriesLength {
-		size = entriesLength - from
-	}
-	return
+	alloc, totalAlloc, s, gc := getMemoryInfo()
+	sendResponse(w, fmt.Sprintf("Memory:\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
+		alloc, totalAlloc, s, gc))
 }

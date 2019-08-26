@@ -5,7 +5,7 @@ case $1 in
 # 编译指定的平台
 --cross|-c)
     latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
-    flags="-s -w -X 'main.buildStamp=$(date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
+    flags="-s -w -X 'main.buildStamp=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
     echo "Build flags: ${flags}"
 
     IFS=':' read -ra p <<< "$2"
@@ -22,7 +22,7 @@ case $1 in
     git fetch --tags
     latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
 
-    flags="-s -w -X 'main.buildStamp=$(date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
+    flags="-s -w -X 'main.buildStamp=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')' -X main.version=${latestTag} -X 'main.goVersion=$(go version)'"
     echo "Build flags: ${flags}"
 
     start_time=`date +%s`

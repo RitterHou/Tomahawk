@@ -150,15 +150,19 @@ func handlerEntries(w http.ResponseWriter, r *http.Request) {
 			response += fmt.Sprintf("Post Success: {\"%s\": \"%s\"}\n", e.Key, e.Value)
 		}
 
+		// 设置响应内容
 		sendResponse(w, response)
+
 		// 把entries加入到leader本地的log[]中
 		common.AppendEntryList(entries)
 		// 因为leader主动向follower发送了数据，所以此周期内不再需要主动发送心跳
 		common.LeaderSendEntryCh <- true
-		// leader向follower发送消息
-		node.SendAppendEntries()
 
-		<-common.LeaderAppendSuccess // 如果大部分的follower返回，则leader返回给client
+		// leader向follower发送消息
+		appendSuccess := make(chan bool)
+		node.SendAppendEntries(appendSuccess)
+
+		<-appendSuccess // 如果大部分的follower返回，则leader返回给client
 	default:
 		sendResponse(w, "Only allow method [GET, POST].")
 	}

@@ -105,6 +105,8 @@ if [[ "${operation}" = "start" ]]; then
 
     ./${file} ${params} >${log} 2>&1 &
     pid=$!
+
+    echo "Starting Tomahawk Daemon..."
     sleep 1
 
     # 检测进程是否启动成功
@@ -123,7 +125,15 @@ if [[ "${operation}" = "start" ]]; then
     fi
 elif [[ "${operation}" = "stop" ]]; then
     if [[ ! -e "${pidFile}" ]]; then
-        echo "Can't stop Tomahawk daemon because it's not running"
+        echo "No pid file found"
+        exit 1
+    fi
+
+    ps -ef | grep `cat ${pidFile}` | grep -v grep
+    if [[ $? -ne 0 ]]
+    then
+        echo -n "Pid is not running: "
+        cat ${pidFile}
         exit 1
     fi
 

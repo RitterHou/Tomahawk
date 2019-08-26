@@ -68,7 +68,7 @@ func Run() {
 
 					// 选举成功立即发送心跳，防止follower再次超时
 					// common.LeaderSendEntryCh <- true, leader在这个周期再超时一次也没有关系
-					node.SendAppendEntries()
+					node.SendAppendEntries(nil) // 心跳不需要客户端响应，channel为空也没关系
 				} else { // 选举失败
 					common.ChangeRole(common.Follower)
 					if tog.LogLevel(tog.WARN) {
@@ -92,7 +92,7 @@ func Run() {
 					log.Printf("%s(me) Leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
-				node.SendAppendEntries()
+				node.SendAppendEntries(nil) // 心跳不需要客户端响应，channel为空也没关系
 			}
 		}
 	}

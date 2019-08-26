@@ -57,10 +57,9 @@ const (
 
 // 一些用于协程间同步的channel
 var (
-	HeartbeatTimeoutCh  = make(chan bool, 1) // 当前节点心跳超时的channel，表示此周期内已经接收到了心跳，follower不需要超时
-	VoteSuccessCh       = make(chan bool, 1) // 选举情况channel，表示选举成功还是失败、或者超时
-	LeaderSendEntryCh   = make(chan bool, 1) // leader发送了信息的channel，意味着在这个周期内leader不再需要主动发送心跳
-	LeaderAppendSuccess = make(chan bool, 1) // leader复制entries给大部分的follower操作成功，此时leader可以返回给客户端
+	HeartbeatTimeoutCh = make(chan bool, 1) // 当前节点心跳超时的channel，表示此周期内已经接收到了心跳，follower不需要超时
+	VoteSuccessCh      = make(chan bool, 1) // 选举情况channel，表示选举成功还是失败、或者超时
+	LeaderSendEntryCh  = make(chan bool, 1) // leader发送了信息的channel，意味着在这个周期内leader不再需要主动发送心跳
 )
 
 const (

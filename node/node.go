@@ -182,13 +182,13 @@ func SendDataToFollowers(nodes []Node, data []byte) {
 }
 
 // 发送entries信息给follower，即AppendEntries操作
-func SendAppendEntries() {
+func SendAppendEntries(appendSuccessChannel chan bool) {
 	replicatedNum := uint32(1) // 记录已经成功复制的follower
 
 	for _, n := range GetNodes() {
 		if n.Conn == nil {
 			if tog.LogLevel(tog.DEBUG) {
-				//log.Printf("%s's conn is nil\n", n.NodeId)
+				log.Printf("%s's conn is nil\n", n.NodeId)
 			}
 			continue
 		}
@@ -206,7 +206,8 @@ func SendAppendEntries() {
 			entries := common.GetEntries()[n.NextIndex:]
 			entriesLength := len(entries)
 			if tog.LogLevel(tog.DEBUG) {
-				log.Printf("%s(me) for %s entriesLength: %d and nextIndex: %d\n", common.LocalNodeId, n.NodeId, entriesLength, n.NextIndex)
+				log.Printf(">>>>>>>>>> Starting Send AppendEntries (%s -> %s)\n", common.LocalNodeId, n.NodeId)
+				log.Printf("%s(me) Settings for follower: %s, entriesLength: %d and nextIndex: %d\n", common.LocalNodeId, n.NodeId, entriesLength, n.NextIndex)
 			}
 
 			// 该follower在leader中所记录的最后一个节点的index
@@ -242,13 +243,20 @@ func SendAppendEntries() {
 						common.LocalNodeId, n.NodeId, appendSuccess)
 				}
 				if appendSuccess {
-					// Append成功，该follower已经追上leader的entries进度
-					UpdateNextIndexByNodeId(n.NodeId, common.GetEntriesLength())
-					UpdateMatchIndex(n.NodeId)
-					atomic.AddUint32(&replicatedNum, 1)
-					if replicatedNum == common.Quorum { // 只触发一次
-						common.LeaderAppendSuccess <- true  // client返回
-						common.CommittedIndex = commitIndex // commit
+					if entriesLength == 0 {
+						// 空的心跳包不需要做任何操作
+						if tog.LogLevel(tog.DEBUG) {
+							log.Println("Heartbeat AppendEntries Response and nothing to do.")
+						}
+					} else {
+						// Append成功，该follower已经追上leader的entries进度
+						UpdateNextIndexByNodeId(n.NodeId, common.GetEntriesLength())
+						UpdateMatchIndex(n.NodeId)
+						atomic.AddUint32(&replicatedNum, 1)
+						if replicatedNum == common.Quorum { // 只触发一次
+							appendSuccessChannel <- true        // client返回
+							common.CommittedIndex = commitIndex // commit
+						}
 					}
 				} else {
 					// 发送失败，减小nextIndex进行重试

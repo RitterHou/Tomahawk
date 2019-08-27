@@ -10,17 +10,17 @@ import (
 	"log"
 	"net/http"
 	"sort"
-	"strings"
 )
 
 // 启动HTTP服务器
 func StartHttpServer(port uint) {
 	http.HandleFunc("/", root)                  // 根目录
-	http.HandleFunc("/nodes", nodes)            // 显示节点信息
-	http.HandleFunc("/entries", handlerEntries) // 读写entries
-	http.HandleFunc("/rikka", rikka)            // rikka图片
-	http.HandleFunc("/favicon.ico", favicon)    // favicon.ico
 	http.HandleFunc("/status", status)          // 获取节点的状态信息
+	http.HandleFunc("/entries", handlerEntries) // 读写entries
+
+	// 返回图片，不包含数据信息
+	http.HandleFunc("/rikka", rikka)         // rikka图片
+	http.HandleFunc("/favicon.ico", favicon) // favicon.ico
 
 	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
@@ -46,33 +46,6 @@ func root(w http.ResponseWriter, r *http.Request) {
 	sendResponse(w, fmt.Sprintf("Build TimeStamp : %s\n", common.BuildStamp))
 	sendResponse(w, fmt.Sprintf("Version         : %s\n", common.Version))
 	sendResponse(w, fmt.Sprintf("Go Version      : %s\n", common.GoVersion))
-}
-
-// 显示节点信息
-func nodes(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		sendResponse(w, "Only allow method [GET].")
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	table := ""
-
-	nodes := node.GetNodes()
-	sort.Sort(nodes) // 对节点列表进行排序
-	for _, n := range nodes {
-		star := " "
-		if n.NodeId == common.LeaderNodeId {
-			star = "*"
-		}
-		me := " "
-		if n.NodeId == common.LocalNodeId {
-			me = "▴"
-		}
-		table += fmt.Sprintf(common.NodePageTableTemplate, star, me, n.NodeId, n.Ip, n.HTTPPort)
-	}
-	sendResponse(w, fmt.Sprintf(common.NodesPage, strings.Replace(table, " ", "&nbsp;", -1)))
 }
 
 // 读写数据
@@ -205,13 +178,59 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// goroutine的数量
-	sendResponse(w, fmt.Sprintf("Goroutines:\t%d\n", getGoroutineNum()))
-	// 内存信息
-	alloc, totalAlloc, s, gc := getMemoryInfo()
-	sendResponse(w, fmt.Sprintf("Memory:\t\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
-		alloc, totalAlloc, s, gc))
-	// 进程启动时间
-	sendResponse(w, fmt.Sprintf("Start:\t\t%s\nRuntime:\t%s\n", timestampFormat(common.StartingTimeStamp),
-		secondToHumanReadable(common.MakeTimestamp()-common.StartingTimeStamp)))
+	local := r.URL.Query().Get("local")
+	// 只查询当前节点的数据
+	if local == "true" {
+		localNode := node.GetNode(common.LocalNodeId)
+		leader := ""
+		if common.Role == common.Leader {
+			leader = "(leader)"
+		}
+		// Host
+		sendResponse(w, fmt.Sprintf("Host:\t\t%s:%d %s\n", localNode.Ip, localNode.HTTPPort, leader))
+		// 节点ID
+		sendResponse(w, fmt.Sprintf("NodeId:\t\t%s\n", common.LocalNodeId))
+		// goroutine的数量
+		sendResponse(w, fmt.Sprintf("Goroutines:\t%d\n", getGoroutineNum()))
+		// 内存信息
+		alloc, totalAlloc, s, gc := getMemoryInfo()
+		sendResponse(w, fmt.Sprintf("Memory:\t\tAlloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tNumGC = %v\n",
+			alloc, totalAlloc, s, gc))
+		// 进程启动时间
+		sendResponse(w, fmt.Sprintf("Start:\t\t%s\nRuntime:\t%s\n", timestampFormat(common.StartingTimeStamp),
+			secondToHumanReadable(common.MakeTimestamp()-common.StartingTimeStamp)))
+		return
+	}
+
+	// 查询所有节点的信息
+	nodes := node.GetNodes()
+	sort.Sort(nodes) // 对节点列表进行排序
+	for _, n := range nodes {
+		res, err := http.Get(fmt.Sprintf("http://%s:%d/status?local=true", n.Ip, n.HTTPPort))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if res == nil {
+			log.Println("Response is nil")
+			return
+		}
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		err = res.Body.Close()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		sendResponse(w, string(body)+"\n")
+	}
 }

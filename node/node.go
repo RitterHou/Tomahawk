@@ -226,6 +226,14 @@ func SendAppendEntries(appendSuccessChannel chan bool) {
 				commitIndex = common.Max(commitIndex, entries[i].Index) // 获取到最大的Index
 			}
 
+			// 如果运行中角色发生了变化，那么就不再允许向follower发送数据
+			if common.Role != common.Leader {
+				if tog.LogLevel(tog.WARN) {
+					log.Printf("Can't send AppendEntries to followers, current role is %v", common.Role)
+				}
+				return
+			}
+
 			// 发送appendEntries给follower
 			err := sendData(n, data)
 			if err != nil {

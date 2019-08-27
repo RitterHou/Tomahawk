@@ -33,7 +33,7 @@ func Run() {
 
 			nodes := node.GetNodes()
 			if len(nodes) == 1 { // 单个节点的情况
-				if common.Votes >= common.Quorum {
+				if 1 >= common.Quorum {
 					common.VoteSuccessCh <- true
 				} else {
 					common.VoteSuccessCh <- false

@@ -182,12 +182,10 @@ func status(w http.ResponseWriter, r *http.Request) {
 	// 只查询当前节点的数据
 	if local == "true" {
 		localNode := node.GetNode(common.LocalNodeId)
-		leader := ""
-		if common.Role == common.Leader {
-			leader = "(leader)"
-		}
 		// Host
-		sendResponse(w, fmt.Sprintf("Host:\t\t%s:%d %s\n", localNode.Ip, localNode.HTTPPort, leader))
+		sendResponse(w, fmt.Sprintf("Host:\t\t%s:%d\n", localNode.Ip, localNode.HTTPPort))
+		// 角色
+		sendResponse(w, fmt.Sprintf("Role:\t\t%v\n", common.Role))
 		// 节点ID
 		sendResponse(w, fmt.Sprintf("NodeId:\t\t%s\n", common.LocalNodeId))
 		// goroutine的数量

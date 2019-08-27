@@ -90,7 +90,7 @@ func GetLocalIp() string {
 // 更新角色的状态
 func ChangeRole(role RoleType) {
 	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("%s(me) change role form %v to %v\n", LocalNodeId, Role, role)
+		log.Printf("%s(me) Change role from %v to %v\n", LocalNodeId, Role, role)
 	}
 
 	Role = role
@@ -113,7 +113,7 @@ func ChangeRole(role RoleType) {
 // 更新选举任期
 func ChangeTerm(term uint32) {
 	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("%s(me) change term form %v to %v\n", LocalNodeId, CurrentTerm, term)
+		log.Printf("%s(me) Change term from %v to %v\n", LocalNodeId, CurrentTerm, term)
 	}
 
 	CurrentTerm = term

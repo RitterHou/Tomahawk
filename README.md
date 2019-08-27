@@ -60,7 +60,7 @@ Query data
     
 Show nodes info
 
-    curl -X GET 'http://localhost:6202/nodes'
+    curl -X GET 'http://localhost:6202/status'
     
 ### TODO
 

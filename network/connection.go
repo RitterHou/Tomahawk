@@ -286,6 +286,11 @@ func handleConnection(c net.Conn) {
 			if !success {
 				return
 			}
+
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("AppendEntries from leader, entries length: %d\n", appendEntriesLength)
+			}
+
 			// 遍历所有的entry
 			for i := uint32(0); i < appendEntriesLength; i++ {
 				keyBuf, success := readStr()
@@ -317,7 +322,7 @@ func handleConnection(c net.Conn) {
 					return
 				}
 
-				if tog.LogLevel(tog.INFO) {
+				if tog.LogLevel(tog.TRACE) {
 					log.Printf("AppendEntry from leader, key: %s, value: %s, term: %d, index: %d\n",
 						key, value, term, index)
 				}

@@ -44,6 +44,7 @@ const (
 	WARN
 	INFO
 	DEBUG
+	TRACE
 )
 
 // 判断日志等级

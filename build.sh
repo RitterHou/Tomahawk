@@ -29,11 +29,8 @@ case $1 in
 
     # 所有目标的编译平台
     declare -a platforms=(
-        "android:arm"
         "darwin:386"
         "darwin:amd64"
-        "darwin:arm"
-        "darwin:arm64"
         "dragonfly:amd64"
         "freebsd:386"
         "freebsd:amd64"

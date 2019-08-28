@@ -3,7 +3,6 @@ package main
 import (
 	"./common"
 	"./http"
-	"./network"
 	"./node"
 	"./raft"
 	"./tog"
@@ -60,9 +59,9 @@ func main() {
 
 	// 先连接，后启动监听，主要是为了防止连接到自己
 	for _, host := range common.Hosts {
-		network.Connect(host)
+		node.Connect(host)
 	}
-	go network.Listen(common.Port)        // 监听TCP端口
+	go node.Listen(common.Port)           // 监听TCP端口
 	go raft.Run()                         // 启动Raft协程
 	http.StartHttpServer(common.HTTPPort) // 监听HTTP端口
 }

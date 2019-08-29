@@ -5,21 +5,17 @@ package node
 import (
 	"../common"
 	"../tog"
-	"errors"
-	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
 )
 
 // 向指定节点发送数据
-func sendData(n Node, data []byte) error {
+func sendData(n Node, data []byte) bool {
 	err := n.Conn.Write(data)
 	if err != nil {
 		if tog.LogLevel(tog.WARN) {
 			log.Printf("Send data error: %v\n", err)
-			log.Printf("colse connection %s -> %s\n",
-				n.Conn.LocalAddr(), n.Conn.RemoteAddr())
 		}
 		// 关闭连接
 		err = n.Conn.Close()
@@ -27,9 +23,9 @@ func sendData(n Node, data []byte) error {
 			log.Fatal(err)
 		}
 		RemoveNodeById(n.NodeId) // 连接出现异常，移除该节点
-		return errors.New(fmt.Sprintf("%v write data failed", n.Conn))
+		return false
 	}
-	return nil
+	return true
 }
 
 // 给所有的节点发送数据
@@ -99,9 +95,8 @@ func SendAppendEntries(appendSuccessChannel chan bool) {
 			}
 
 			// 发送appendEntries给follower
-			err := sendData(n, data)
-			if err != nil {
-				// 如果发送失败则无需再进行接下来的操作
+			success := sendData(n, data)
+			if !success {
 				return
 			}
 

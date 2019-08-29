@@ -34,12 +34,15 @@ func (conn *Conn) RemoteAddr() string {
 
 // 关闭连接
 func (conn *Conn) Close() error {
-	if tog.LogLevel(tog.INFO) {
-		log.Printf("colse connection %s -> %s\n", conn.LocalAddr(), conn.RemoteAddr())
+	if conn.closed {
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("Connection has been closed %s -> %s\n", conn.LocalAddr(), conn.RemoteAddr())
+		}
+		return nil
 	}
 
-	if conn.closed {
-		return nil
+	if tog.LogLevel(tog.INFO) {
+		log.Printf("Colse connection %s -> %s\n", conn.LocalAddr(), conn.RemoteAddr())
 	}
 
 	err := conn.c.Close()

@@ -5,6 +5,7 @@ package common
 import (
 	"../tog"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -156,6 +157,6 @@ func GetSocketDataType(socketType byte) string {
 	case VoteResponse:
 		return "VoteResponse"
 	default:
-		return "Unknown Socket Type"
+		return fmt.Sprintf("Unknown Socket Type: %d", socketType)
 	}
 }

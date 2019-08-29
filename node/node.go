@@ -1,3 +1,5 @@
+// Raft算法中数据分布在多个节点上
+
 package node
 
 import (

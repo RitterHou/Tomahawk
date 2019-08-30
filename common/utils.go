@@ -117,6 +117,10 @@ func ChangeTerm(term uint32) {
 		log.Printf("%s(me) Change term from %v to %v\n", LocalNodeId, CurrentTerm, term)
 	}
 
+	if CurrentTerm > term {
+		log.Fatalf("Can't change term from %d to %d", CurrentTerm, term)
+	}
+
 	CurrentTerm = term
 }
 

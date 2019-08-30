@@ -260,7 +260,8 @@ func appendEntries(conn *network.Conn) bool {
 	}
 
 	if tog.LogLevel(tog.DEBUG) {
-		log.Printf("AppendEntries from leader, entries length: %d\n", appendEntriesLength)
+		log.Printf("AppendEntries from leader, entries length: %d, local role: %s, term:{local: %d, remote: %d}\n",
+			appendEntriesLength, common.Role, common.CurrentTerm, leaderTerm)
 	}
 
 	// 遍历所有的entry
@@ -335,8 +336,10 @@ func appendEntries(conn *network.Conn) bool {
 	case common.Follower:
 		// 重置超时定时器
 		common.HeartbeatTimeoutCh <- true
-		common.ChangeTerm(leaderTerm)
-		common.LeaderNodeId = conn.GetRemoteNodeId() // 设置leader节点
+		if leaderTerm >= common.CurrentTerm {
+			common.ChangeTerm(leaderTerm)
+			common.LeaderNodeId = conn.GetRemoteNodeId() // 设置leader节点
+		}
 	}
 
 	// AppendEntries的响应

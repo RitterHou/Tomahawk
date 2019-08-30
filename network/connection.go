@@ -18,8 +18,17 @@ func NewConn(c net.Conn) *Conn {
 
 // 对基础的网络连接对象进行封装
 type Conn struct {
-	c      net.Conn
-	closed bool
+	c            net.Conn // 对应的TCP连接
+	closed       bool     // 记录连接是否已经关闭
+	remoteNodeId string   // 该连接所对应的远程节点ID
+}
+
+func (conn *Conn) SetRemoteNodeId(remoteNodeId string) {
+	conn.remoteNodeId = remoteNodeId
+}
+
+func (conn *Conn) GetRemoteNodeId() string {
+	return conn.remoteNodeId
 }
 
 // 获取连接的本地地址

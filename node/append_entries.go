@@ -98,7 +98,7 @@ func SendAppendEntries(appendSuccessChannel chan bool) {
 			select {
 			case appendSuccess := <-n.AppendSuccess:
 				if tog.LogLevel(tog.DEBUG) {
-					log.Printf("%s(me) Get AppendEntries Reponse from %s: %v\n",
+					log.Printf("%s(me) Get AppendEntries Response from %s: %v\n",
 						common.LocalNodeId, n.NodeId, appendSuccess)
 				}
 				if appendSuccess {

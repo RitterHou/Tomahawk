@@ -20,6 +20,7 @@ func handleConnection(conn *network.Conn) {
 	var remoteNodeId string
 
 	defer func() {
+		// 出现任何意外情况导致连接出现问题，移除该连接所对应的节点
 		RemoveNodeById(remoteNodeId)
 
 		err := conn.Close()
@@ -29,7 +30,10 @@ func handleConnection(conn *network.Conn) {
 	}()
 
 	// 第一件事就是把当前节点的信息告知远程节点
-	sendNodeInfo(conn)
+	success := sendNodeInfo(conn)
+	if !success {
+		return
+	}
 
 	// 读取远程主机发送的数据
 	for {
@@ -100,9 +104,9 @@ func handleConnection(conn *network.Conn) {
 					info = append(info, common.AddBufHead(nodeIdBuf)...)
 					info = append(info, common.AddBufHead([]byte(remoteIp))...)
 					info = append(info, remotePortBuf...)
-					err := nodeConn.Write(info)
-					if err != nil {
-						log.Fatal(err)
+					success := nodeConn.Write(info)
+					if !success {
+						return
 					}
 				}
 			}
@@ -265,9 +269,9 @@ func handleConnection(conn *network.Conn) {
 			}
 
 			response = append(response, common.Uint32ToBytes(common.CurrentTerm)...)
-			err := conn.Write(response)
-			if err != nil {
-				log.Fatal(err)
+			writeSuccess := conn.Write(response)
+			if !writeSuccess {
+				return
 			}
 
 			if tog.LogLevel(tog.DEBUG) {
@@ -356,9 +360,9 @@ func handleConnection(conn *network.Conn) {
 			}
 
 			response = append(response, common.Uint32ToBytes(common.CurrentTerm)...)
-			err := conn.Write(response)
-			if err != nil {
-				log.Fatal(err)
+			writeSuccess := conn.Write(response)
+			if !writeSuccess {
+				return
 			}
 		case common.VoteResponse:
 			voteBuf, success := conn.ReadByte()
@@ -395,7 +399,7 @@ func handleConnection(conn *network.Conn) {
 }
 
 // 发送当前节点的信息给远程节点
-func sendNodeInfo(c *network.Conn) {
+func sendNodeInfo(c *network.Conn) bool {
 	localNodeIdBuf := common.AddBufHead([]byte(common.LocalNodeId))
 	portBuf := common.Uint32ToBytes(uint32(common.Port))
 	httpPortBuf := common.Uint32ToBytes(uint32(common.HTTPPort))
@@ -406,8 +410,6 @@ func sendNodeInfo(c *network.Conn) {
 	nodeInfo = append(nodeInfo, httpPortBuf...)    // HTTP服务端口
 
 	// 一旦与远程主机连接，立即告知其自己的节点信息
-	err := c.Write(nodeInfo)
-	if err != nil {
-		log.Fatal(err)
-	}
+	success := c.Write(nodeInfo)
+	return success
 }

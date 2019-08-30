@@ -12,16 +12,8 @@ import (
 
 // 向指定节点发送数据
 func sendData(n Node, data []byte) bool {
-	err := n.Conn.Write(data)
-	if err != nil {
-		if tog.LogLevel(tog.WARN) {
-			log.Printf("Send data error: %v\n", err)
-		}
-		// 关闭连接
-		err = n.Conn.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
+	success := n.Conn.Write(data)
+	if !success {
 		RemoveNodeById(n.NodeId) // 连接出现异常，移除该节点
 		return false
 	}

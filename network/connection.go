@@ -64,9 +64,20 @@ func (conn *Conn) LocalPort() uint {
 }
 
 // 向远程主机写数据
-func (conn *Conn) Write(data []byte) error {
+func (conn *Conn) Write(data []byte) bool {
 	_, err := conn.c.Write(data)
-	return err
+	if err != nil {
+		if tog.LogLevel(tog.WARN) {
+			log.Printf("Write data error: %v\n", err)
+		}
+		// 关闭连接
+		err = conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return false
+	}
+	return true
 }
 
 // 对数据读取做了简单的封装

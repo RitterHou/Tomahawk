@@ -42,7 +42,8 @@ func handleConnection(conn *network.Conn) {
 		socketDataType := common.GetSocketDataType(dataType)
 		readRemoteDataStart := time.Now().UnixNano()
 		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("%s Read data type: %v\n", common.LocalNodeId, socketDataType)
+			log.Printf("%s Read data type from %s: %v\n",
+				common.LocalNodeId, conn.GetRemoteNodeId(), socketDataType)
 		}
 
 		switch dataType {
@@ -81,7 +82,11 @@ func handleConnection(conn *network.Conn) {
 		readRemoteDataEnd := time.Now().UnixNano()
 		readRemoteDataCost := readRemoteDataEnd - readRemoteDataStart
 		if tog.LogLevel(tog.DEBUG) {
-			log.Printf("Cost %dms %dns, %s\n", readRemoteDataCost/1e6, readRemoteDataCost, socketDataType)
+			if readRemoteDataCost/1e6 > 0 {
+				log.Printf("Cost %dms, %s\n", readRemoteDataCost/1e6, socketDataType)
+			} else {
+				log.Printf("Cost %dns, %s\n", readRemoteDataCost, socketDataType)
+			}
 		}
 	}
 }
@@ -224,6 +229,9 @@ func appendEntries(conn *network.Conn) bool {
 	// leader的此次append是否成功
 	appendSuccess := true
 	if leaderTerm < common.CurrentTerm {
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("Leader term %d little than local term %d, append fialed\n", leaderTerm, common.CurrentTerm)
+		}
 		appendSuccess = false
 	}
 
@@ -231,9 +239,17 @@ func appendEntries(conn *network.Conn) bool {
 	if uint32(len(entries)) > leaderPrevLogIndex {
 		// leader记录的当前节点最后一个log的term和本地的不一致，appendEntries失败
 		if entry := entries[leaderPrevLogIndex]; entry.Term != leaderPrevLogTerm {
+			if tog.LogLevel(tog.DEBUG) {
+				log.Printf("LeaderPrevLogTerm %d not equals local term %d at index %d, append fialed\n",
+					leaderPrevLogIndex, entry.Term, leaderPrevLogIndex)
+			}
 			appendSuccess = false
 		}
 	} else {
+		if tog.LogLevel(tog.DEBUG) {
+			log.Printf("Local entriesLegnth %d little than leaderPrevLogIndex %d, append fialed\n",
+				len(entries), leaderPrevLogIndex)
+		}
 		// 如果leader记录的当前节点index超出限制，也是一种不匹配
 		appendSuccess = false
 	}

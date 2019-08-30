@@ -76,7 +76,7 @@ func main() {
 	entries := make([]entry, 0)
 	entries = append(entries, entry{Key: "😊😊😊", Value: "😁😁😁😁😁😆😆😆😆😆"})
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		key := randomString(10)
 		value := randomString(15)
 		entries = append(entries, entry{Key: key, Value: value})

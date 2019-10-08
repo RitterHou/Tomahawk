@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 )
 
 // 创建一个包装类型的连接
@@ -18,9 +19,10 @@ func NewConn(c net.Conn) *Conn {
 
 // 对基础的网络连接对象进行封装
 type Conn struct {
-	c            net.Conn // 对应的TCP连接
-	closed       bool     // 记录连接是否已经关闭
-	remoteNodeId string   // 该连接所对应的远程节点ID
+	c            net.Conn   // 对应的TCP连接
+	closeLock    sync.Mutex // 关闭连接的时候需要加锁
+	closed       bool       // 记录连接是否已经关闭
+	remoteNodeId string     // 该连接所对应的远程节点ID
 }
 
 func (conn *Conn) SetRemoteNodeId(remoteNodeId string) {
@@ -43,6 +45,9 @@ func (conn *Conn) RemoteAddr() string {
 
 // 关闭连接
 func (conn *Conn) Close() error {
+	defer conn.closeLock.Unlock()
+	conn.closeLock.Lock()
+
 	if conn.closed {
 		if tog.LogLevel(tog.DEBUG) {
 			log.Printf("Connection has been closed %s -> %s\n", conn.LocalAddr(), conn.RemoteAddr())

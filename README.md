@@ -7,6 +7,7 @@
 ![Golang](https://img.shields.io/badge/golang-1.12.5-blue.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/RitterHou/Tomahawk)](https://goreportcard.com/report/github.com/RitterHou/Tomahawk)
 [![GitHub license](https://img.shields.io/github/license/RitterHou/Tomahawk)](https://github.com/RitterHou/Tomahawk/blob/master/LICENSE)
+![](https://img.shields.io/github/languages/code-size/RitterHou/Tomahawk.svg?style=flat)
 
 ### Installation
 

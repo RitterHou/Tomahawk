@@ -25,7 +25,7 @@ func StartHttpServer(port uint) {
 	if tog.LogLevel(tog.INFO) {
 		log.Println("HTTP Server Listening Port", port)
 	}
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))
+	log.Panic(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil))
 }
 
 // 根路径，显示服务器信息

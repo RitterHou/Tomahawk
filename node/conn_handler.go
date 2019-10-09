@@ -22,7 +22,7 @@ func handleConnection(conn *network.Conn) {
 
 		err := conn.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}()
 

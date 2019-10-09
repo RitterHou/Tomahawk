@@ -138,7 +138,7 @@ func SendAppendEntries(appendSuccessChannel chan bool) {
 			case <-time.After(time.Duration(common.LeaderAppendEntriesTimeout) * time.Millisecond):
 				// AppendEntries超时，不需要手动重试，因为leader的下一次心跳
 				// 将在 LeaderCycleTimeout - LeaderAppendEntriesTimeout 后发生，心跳会实现下一次重试
-				if tog.LogLevel(tog.DEBUG) {
+				if tog.LogLevel(tog.WARN) {
 					log.Printf("%s(me) to %s AppendEntries timeout and retry\n", common.LocalNodeId, n.NodeId)
 				}
 			}

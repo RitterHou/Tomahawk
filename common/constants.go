@@ -12,13 +12,13 @@ func init() {
 	var err error
 	Rikka, err = base64.StdEncoding.DecodeString(rikka)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	RikkaLength = fmt.Sprint(len(Rikka))
 
 	Icon, err = base64.StdEncoding.DecodeString(icon)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	IconLength = fmt.Sprint(len(Icon))
 }

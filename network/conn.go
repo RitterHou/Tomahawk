@@ -73,7 +73,7 @@ func (conn *Conn) LocalPort() uint {
 	if addr, ok := conn.c.LocalAddr().(*net.TCPAddr); ok {
 		return uint(addr.Port)
 	}
-	log.Fatal("Current address convert failed")
+	log.Panic("Current address convert failed")
 	return 0
 }
 
@@ -87,7 +87,7 @@ func (conn *Conn) Write(data []byte) bool {
 		// 关闭连接
 		err = conn.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 		return false
 	}
@@ -111,7 +111,7 @@ func (conn *Conn) ReadBytes(length uint32) ([]byte, bool) {
 			}
 			return nil, false
 		}
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	return data, true
 }

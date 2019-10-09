@@ -18,7 +18,7 @@ var nodes sync.Map
 // 添加一个节点，如果节点已经存在则会替换
 func AddNode(node Node) {
 	if node.NodeId == "" {
-		log.Fatal("node id can't be none")
+		log.Panic("node id can't be none")
 	}
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) add node %s", common.LocalNodeId, node.NodeId)
@@ -54,7 +54,7 @@ func UpdateNextIndexByNodeId(nodeId string, nextIndex uint32) {
 // 移除一个节点
 func RemoveNodeById(nodeId string) {
 	if nodeId == "" {
-		log.Fatal("node id can't be none")
+		log.Panic("node id can't be none")
 	}
 	if tog.LogLevel(tog.DEBUG) {
 		log.Printf("%s(me) remove node %s", common.LocalNodeId, nodeId)
@@ -76,7 +76,7 @@ func RemoveNodeById(nodeId string) {
 // 判断指定节点是否存在
 func ExistNode(nodeId string) bool {
 	if nodeId == "" {
-		log.Fatal("node id can't be none")
+		log.Panic("node id can't be none")
 	}
 	_, ok := nodes.Load(nodeId)
 	return ok
@@ -85,7 +85,7 @@ func ExistNode(nodeId string) bool {
 // 获取指定节点
 func GetNode(nodeId string) Node {
 	if nodeId == "" {
-		log.Fatal("node id can't be none")
+		log.Panic("node id can't be none")
 	}
 	n, _ := nodes.Load(nodeId)
 	return n.(Node)

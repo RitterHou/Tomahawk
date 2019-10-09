@@ -20,7 +20,7 @@ func Connect(host string) {
 			}
 			return
 		}
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	conn := network.NewConn(c)
@@ -34,7 +34,7 @@ func Listen(port uint) {
 	host := fmt.Sprintf("0.0.0.0:%d", port)
 	l, err := net.Listen("tcp", host)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if tog.LogLevel(tog.INFO) {
 		log.Println("TCP Server Listening Port", port)
@@ -42,14 +42,14 @@ func Listen(port uint) {
 	defer func() {
 		err = l.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}()
 
 	for {
 		c, err := l.Accept()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
 		conn := network.NewConn(c)

@@ -56,19 +56,19 @@ func Run() {
 						log.Printf("%s(me) Vote success and become leader\n", common.LocalNodeId)
 					}
 
-					// 刚刚当选的时候添加一条 no operation 的日志记录
+					// 刚刚当选的时候向本地添加一条 no operation 的日志记录
 					noOp := common.Entry{Key: "", Value: ""}
 					common.AppendEntryList([]common.Entry{noOp})
 
 					// 当一个领导人刚获得权力的时候，他初始化所有的nextIndex值为自己的最后一条日志的index加1
+					nextIndex := common.GetEntriesLength()
 					for _, n := range node.GetNodes() {
-						nextIndex := common.GetEntriesLength()
 						node.UpdateNextIndexByNodeId(n.NodeId, nextIndex)
 					}
 
 					// 选举成功立即发送心跳，防止follower再次超时
-					// common.LeaderSendEntryCh <- true, leader在这个周期再超时一次也没有关系
-					node.SendAppendEntries(nil) // 心跳不需要客户端响应，channel为空也没关系
+					// 心跳的数据为空，不需要客户端响应，channel为空也没关系
+					node.SendAppendEntries(nil)
 				} else { // 选举失败
 					common.ChangeRole(common.Follower)
 					if tog.LogLevel(tog.WARN) {
@@ -77,7 +77,7 @@ func Run() {
 				}
 			case <-time.After(time.Duration(electionTimeout) * time.Millisecond): // 选举超时
 				if tog.LogLevel(tog.WARN) {
-					log.Printf("%s(me) This turn election failed, next turn election will start soon\n",
+					log.Printf("%s(me) This turn election timeout, next turn election will start soon\n",
 						common.LocalNodeId)
 				}
 			}
@@ -92,7 +92,7 @@ func Run() {
 					log.Printf("%s(me) Leader not send data, send empty data as heartbeat\n", common.LocalNodeId)
 				}
 				// 超时则发送心跳
-				node.SendAppendEntries(nil) // 心跳不需要客户端响应，channel为空也没关系
+				node.SendAppendEntries(nil)
 			}
 		}
 	}
